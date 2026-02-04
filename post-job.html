@@ -2,45 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Post a Job - LocalJobsUK</title>
+  <title>Post a Job – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+      authDomain: "localjobsuk-fcaba.firebaseapp.com",
+      projectId: "localjobsuk-fcaba",
+      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+      messagingSenderId: "340038751338",
+      appId: "1:340038751338:web:05cca93a73a61de10d2613"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.postJob = async function () {
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+      const location = document.getElementById("location").value;
+
+      if (!title || !description || !location) {
+        alert("Please fill all fields");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "jobs"), {
+          title,
+          description,
+          location,
+          createdAt: new Date(),
+          workersUnlocked: 0
+        });
+
+        alert("Job posted successfully!");
+        document.getElementById("jobForm").reset();
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+  </script>
 </head>
 
-<body style="font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px;">
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px;">
 
-  <h1>Post a Job</h1>
-  <p>Describe the work you need done. Local workers will see it.</p>
+  <h2>Post a Job</h2>
 
-  <form>
-    <label>
-      <strong>Job title</strong><br>
-      <input type="text" placeholder="e.g. Grass cutting for front garden"
-             style="width:100%; padding:10px; margin:8px 0;">
-    </label>
+  <form id="jobForm" onsubmit="event.preventDefault(); postJob();">
+    <input id="title" placeholder="Job title (e.g. Cut my grass)"
+           style="width:100%; padding:10px; margin-bottom:10px;">
 
-    <label>
-      <strong>Job description</strong><br>
-      <textarea placeholder="Describe the work in detail"
-                style="width:100%; padding:10px; margin:8px 0; height:120px;"></textarea>
-    </label>
+    <textarea id="description" placeholder="Describe the job"
+              style="width:100%; padding:10px; margin-bottom:10px;"></textarea>
 
-    <label>
-      <strong>Location (town / postcode)</strong><br>
-      <input type="text" placeholder="e.g. Manchester, M20"
-             style="width:100%; padding:10px; margin:8px 0;">
-    </label>
+    <input id="location" placeholder="Location (Town / Postcode)"
+           style="width:100%; padding:10px; margin-bottom:20px;">
 
-    <label>
-      <strong>Upload photos</strong><br>
-      <input type="file" multiple style="margin:10px 0;">
-    </label>
-
-    <br><br>
-
-    <button type="button"
-            style="padding:12px 20px; background:#2e7d32;
-                   color:white; border:none; border-radius:5px;">
-      Post Job (demo)
+    <button style="width:100%; padding:12px;
+                   background:#2e7d32; color:white; border:none;">
+      Post Job (Free)
     </button>
   </form>
 
