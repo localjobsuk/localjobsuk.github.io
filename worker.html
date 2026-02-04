@@ -1,62 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Browse Jobs – LocalJobsUK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, increment, arrayUnion, getDoc } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+    authDomain: "localjobsuk-fcaba.firebaseapp.com",
+    projectId: "localjobsuk-fcaba",
+    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+    messagingSenderId: "340038751338",
+    appId: "1:340038751338:web:05cca93a73a61de10d2613"
+  };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-      authDomain: "localjobsuk-fcaba.firebaseapp.com",
-      projectId: "localjobsuk-fcaba",
-      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-      messagingSenderId: "340038751338",
-      appId: "1:340038751338:web:05cca93a73a61de10d2613"
-    };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  let currentUser = null;
 
-    async function loadJobs() {
-      const jobsDiv = document.getElementById("jobs");
-      const snapshot = await getDocs(collection(db, "jobs"));
+  onAuthStateChanged(auth, user => {
+    if (user) currentUser = user;
+  });
 
-      snapshot.forEach(doc => {
-        const job = doc.data();
-        const div = document.createElement("div");
-        div.style.border = "1px solid #ccc";
-        div.style.padding = "15px";
-        div.style.marginBottom = "10px";
-
-        div.innerHTML = `
-          <h3>${job.title}</h3>
-          <p><strong>Location:</strong> ${job.location}</p>
-          <p>${job.description}</p>
-          <button style="padding:8px 12px;">Unlock job (credits)</button>
-        `;
-
-        jobsDiv.appendChild(div);
-      });
+  async function unlockJob(jobId) {
+    if (!currentUser) {
+      alert("Please log in first");
+      return;
     }
-window.onload = loadJobs;
 
-  
-  </script>
-</head>
+    const userRef = doc(db, "users", currentUser.uid);
+    const jobRef = doc(db, "jobs", jobId);
 
-<body style="font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 30px;">
+    const userSnap = await getDoc(userRef);
+    const jobSnap = await getDoc(jobRef);
 
-  <h2>Available Jobs</h2>
+    if (!userSnap.exists() || !jobSnap.exists()) return;
 
-  <div id="jobs"></div>
+    const userData = userSnap.data();
+    const jobData = jobSnap.data();
 
-  <br>
-  <a href="index.html">← Back to home</a>
+    if (jobData.workersUnlocked >= 3) {
+      alert("This job is already full");
+      return;
+    }
 
-</body>
-</html>
+    if (userData.credits < 1) {
+      alert("Not enough credits");
+      return;
+    }
+
+    await updateDoc(jobRef, {
+      workersUnlocked: increment(1),
+      unlockedBy: arrayUnion(currentUser.uid)
+    });
+
+    await updateDoc(userRef, {
+      credits: increment(-1)
+    });
+
+    alert("Job unlocked successfully!");
+    location.reload();
+  }
+
+  async function loadJobs() {
+    const jobsDiv = document.getElementById("jobs");
+    jobsDiv.innerHTML = "";
+
+    const snapshot = await getDocs(collection(db, "jobs"));
+
+    snapshot.forEach(docSnap => {
+      const job = docSnap.data();
+      const jobId = docSnap.id;
+
+      const div = document.createElement("div");
+      div.style.border = "1px solid #ccc";
+      div.style.padding = "15px";
+      div.style.marginBottom = "10px";
+
+      const isFull = job.workersUnlocked >= 3;
+
+      div.innerHTML = `
+        <h3>${job.title}</h3>
+        <p><strong>Location:</strong> ${job.location}</p>
+        <p>${job.description}</p>
+        <p><strong>Unlocked:</strong> ${job.workersUnlocked || 0}/3</p>
+        <button ${isFull ? "disabled" : ""} 
+          style="padding:8px 12px; ${isFull ? "background:#ccc;" : ""}">
+          ${isFull ? "Job full" : "Unlock job (1 credit)"}
+        </button>
+      `;
+
+      if (!isFull) {
+        div.querySelector("button").onclick = () => unlockJob(jobId);
+      }
+
+      jobsDiv.appendChild(div);
+    });
+  }
+
+  window.onload = loadJobs;
+</script>
