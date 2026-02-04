@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login – LocalJobsUK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+      authDomain: "localjobsuk-fcaba.firebaseapp.com",
+      projectId: "localjobsuk-fcaba",
+      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+      messagingSenderId: "340038751338",
+      appId: "1:340038751338:web:05cca93a73a61de10d2613"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.signUp = function () {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          alert("Account created! You received 10 free credits.");
+        })
+        .catch(err => alert(err.message));
+    };
+
+    window.login = function () {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          alert("Logged in successfully");
+        })
+        .catch(err => alert(err.message));
+    };
+  </script>
+</head>
+
+<body style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 40px;">
+
+  <h2>LocalJobsUK</h2>
+
+  <input id="email" type="email" placeholder="Email"
+         style="width:100%; padding:10px; margin-bottom:10px;">
+
+  <input id="password" type="password" placeholder="Password"
+         style="width:100%; padding:10px; margin-bottom:20px;">
+
+  <button onclick="signUp()"
+          style="width:100%; padding:12px; margin-bottom:10px;
+                 background:#2e7d32; color:white; border:none;">
+    Sign Up (Get 10 Free Credits)
+  </button>
+
+  <button onclick="login()"
+          style="width:100%; padding:12px;
+                 background:#1565c0; color:white; border:none;">
+    Login
+  </button>
+
+  <br><br>
+  <a href="index.html">← Back to home</a>
+
+</body>
+</html>
