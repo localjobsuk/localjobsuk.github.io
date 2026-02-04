@@ -2,36 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Find Work - LocalJobsUK</title>
+  <title>Browse Jobs – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+      authDomain: "localjobsuk-fcaba.firebaseapp.com",
+      projectId: "localjobsuk-fcaba",
+      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+      messagingSenderId: "340038751338",
+      appId: "1:340038751338:web:05cca93a73a61de10d2613"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadJobs() {
+      const jobsDiv = document.getElementById("jobs");
+      const snapshot = await getDocs(collection(db, "jobs"));
+
+      snapshot.forEach(doc => {
+        const job = doc.data();
+        const div = document.createElement("div");
+        div.style.border = "1px solid #ccc";
+        div.style.padding = "15px";
+        div.style.marginBottom = "10px";
+
+        div.innerHTML = `
+          <h3>${job.title}</h3>
+          <p><strong>Location:</strong> ${job.location}</p>
+          <p>${job.description}</p>
+          <button style="padding:8px 12px;">Unlock job (credits)</button>
+        `;
+
+        jobsDiv.appendChild(div);
+      });
+    }
+
+    loadJobs();
+  </script>
 </head>
 
-<body style="font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px;">
+<body style="font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 30px;">
 
-  <h1>Available Jobs</h1>
-  <p>Browse local work and unlock jobs using credits.</p>
+  <h2>Available Jobs</h2>
 
-  <div style="border:1px solid #ccc; padding:15px; margin-bottom:15px;">
-    <h3>Grass cutting – front & back garden</h3>
-    <p><strong>Location:</strong> Manchester</p>
-    <p><strong>Credits required:</strong> 3</p>
-    <button style="padding:8px 15px; background:#1565c0; color:white; border:none; border-radius:4px;">
-      Unlock Job
-    </button>
-  </div>
-
-  <div style="border:1px solid #ccc; padding:15px; margin-bottom:15px;">
-    <h3>Bathroom cleaning</h3>
-    <p><strong>Location:</strong> Birmingham</p>
-    <p><strong>Credits required:</strong> 2</p>
-    <button style="padding:8px 15px; background:#1565c0; color:white; border:none; border-radius:4px;">
-      Unlock Job
-    </button>
-  </div>
-
-  <p style="color: gray;">
-    Demo jobs shown. Real jobs will appear here.
-  </p>
+  <div id="jobs"></div>
 
   <br>
   <a href="index.html">← Back to home</a>
