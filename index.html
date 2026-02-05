@@ -5,6 +5,10 @@
   <title>LocalJobsUK | Hire Local Workers Fast</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -37,6 +41,7 @@
       text-decoration: none;
       margin-left: 20px;
       font-size: 15px;
+      cursor: pointer;
     }
 
     .hero {
@@ -76,66 +81,12 @@
       background: #444;
     }
 
-    .section {
-      max-width: 1100px;
-      margin: auto;
-      padding: 60px 20px;
-    }
-
-    .section h2 {
-      text-align: center;
-      margin-bottom: 40px;
-      font-size: 28px;
-    }
-
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 25px;
-    }
-
-    .card {
-      background: white;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      text-align: center;
-    }
-
-    .card h3 {
-      margin-bottom: 10px;
-    }
-
-    .card p {
-      color: #555;
-      font-size: 15px;
-    }
-
-    .how-it-works {
-      background: #ffffff;
-      padding: 60px 20px;
-    }
-
-    .steps {
-      max-width: 900px;
-      margin: auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 30px;
-    }
-
     footer {
       background: #222;
       color: #bbb;
       padding: 30px 20px;
       text-align: center;
       font-size: 14px;
-    }
-
-    footer a {
-      color: #bbb;
-      text-decoration: none;
-      margin: 0 10px;
     }
   </style>
 </head>
@@ -144,9 +95,8 @@
 <header>
   <div class="nav">
     <div class="logo">LocalJobsUK</div>
-    <div>
-      <a href="login.html">Login</a>
-      <a href="post-job.html">Post a Job</a>
+    <div id="navLinks">
+      <!-- Filled dynamically -->
     </div>
   </div>
 </header>
@@ -164,61 +114,42 @@
   </div>
 </section>
 
-<section class="section">
-  <h2>Why LocalJobsUK?</h2>
-
-  <div class="features">
-    <div class="card">
-      <h3>Local & Trusted</h3>
-      <p>Jobs are posted by real people in your local area.</p>
-    </div>
-
-    <div class="card">
-      <h3>Simple Pricing</h3>
-      <p>Workers unlock jobs using credits. No subscriptions.</p>
-    </div>
-
-    <div class="card">
-      <h3>Fast Hiring</h3>
-      <p>Job owners get up to 3 workers per job — no spam.</p>
-    </div>
-
-    <div class="card">
-      <h3>Mobile Friendly</h3>
-      <p>Works perfectly on phones, tablets and desktops.</p>
-    </div>
-  </div>
-</section>
-
-<section class="how-it-works">
-  <h2>How It Works</h2>
-
-  <div class="steps">
-    <div class="card">
-      <h3>1. Post a Job</h3>
-      <p>Describe the work and your location.</p>
-    </div>
-
-    <div class="card">
-      <h3>2. Workers Apply</h3>
-      <p>Up to 3 local workers can unlock your job.</p>
-    </div>
-
-    <div class="card">
-      <h3>3. Get It Done</h3>
-      <p>Choose who you want and get the job completed.</p>
-    </div>
-  </div>
-</section>
-
 <footer>
   <p>© 2026 LocalJobsUK</p>
-  <p>
-    <a href="login.html">Login</a> |
-    <a href="post-job.html">Post a Job</a> |
-    <a href="worker.html">Find Work</a>
-  </p>
 </footer>
+
+<script>
+  // 🔧 YOUR FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const navLinks = document.getElementById("navLinks");
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      navLinks.innerHTML = `
+        <a href="owner-dashboard.html">My Jobs</a>
+        <a onclick="logout()">Logout</a>
+      `;
+    } else {
+      navLinks.innerHTML = `
+        <a href="login.html">Login</a>
+        <a href="post-job.html">Post a Job</a>
+      `;
+    }
+  });
+
+  function logout() {
+    auth.signOut().then(() => {
+      window.location.href = "index.html";
+    });
+  }
+</script>
 
 </body>
 </html>
