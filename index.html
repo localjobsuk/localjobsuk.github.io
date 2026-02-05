@@ -1,126 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>LocalJobsUK – Find Local Work Fast</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>LocalJobsUK | Hire Local Workers Fast</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    header {
+      background: #0a7cff;
       color: white;
+      padding: 20px;
+    }
+
+    .nav {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+      font-size: 15px;
+    }
+
+    .hero {
+      background: white;
+      padding: 70px 20px;
       text-align: center;
     }
 
-    .container {
-      max-width: 900px;
+    .hero h1 {
+      font-size: 36px;
+      margin-bottom: 15px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: #555;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .cta-buttons {
+      margin-top: 35px;
+    }
+
+    .cta-buttons a {
+      display: inline-block;
+      padding: 15px 28px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: white;
+      background: #0a7cff;
+    }
+
+    .cta-secondary {
+      background: #444;
+    }
+
+    .section {
+      max-width: 1100px;
       margin: auto;
       padding: 60px 20px;
     }
 
-    .logo {
-      font-size: 42px;
-      font-weight: bold;
+    .section h2 {
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 28px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 25px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .card h3 {
       margin-bottom: 10px;
     }
 
-    .tagline {
-      font-size: 18px;
-      opacity: 0.9;
-      margin-bottom: 40px;
-    }
-
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 50px;
-    }
-
-    .btn {
-      background: #ffffff;
-      color: #203a43;
-      padding: 15px 30px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-    }
-
-    .secondary {
-      background: transparent;
-      border: 2px solid white;
-      color: white;
-    }
-
-    .how-it-works {
-      background: white;
-      color: #203a43;
-      border-radius: 12px;
-      padding: 40px 20px;
-    }
-
-    .how-it-works h2 {
-      margin-bottom: 30px;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-    }
-
-    .step {
-      background: #f2f2f2;
-      padding: 20px;
-      border-radius: 10px;
+    .card p {
+      color: #555;
       font-size: 15px;
     }
 
+    .how-it-works {
+      background: #ffffff;
+      padding: 60px 20px;
+    }
+
+    .steps {
+      max-width: 900px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+
     footer {
-      margin-top: 40px;
+      background: #222;
+      color: #bbb;
+      padding: 30px 20px;
+      text-align: center;
       font-size: 14px;
-      opacity: 0.7;
+    }
+
+    footer a {
+      color: #bbb;
+      text-decoration: none;
+      margin: 0 10px;
     }
   </style>
 </head>
-
 <body>
 
-  <div class="container">
+<header>
+  <div class="nav">
     <div class="logo">LocalJobsUK</div>
-    <div class="tagline">
-      Post local jobs. Find trusted local workers. Simple & fast.
+    <div>
+      <a href="login.html">Login</a>
+      <a href="post-job.html">Post a Job</a>
     </div>
-
-    <div class="buttons">
-      <a href="post-job.html" class="btn">Post a Job</a>
-      <a href="worker.html" class="btn secondary">I'm a Worker</a>
-    </div>
-
-    <div class="how-it-works">
-      <h2>How it works</h2>
-
-      <div class="steps">
-        <div class="step">📸 Job owners post a job with details & photos</div>
-        <div class="step">📍 Workers browse nearby jobs</div>
-        <div class="step">💳 Workers unlock jobs using credits</div>
-        <div class="step">💬 Chat starts directly on the platform</div>
-      </div>
-    </div>
-
-    <footer>
-      © 2026 LocalJobsUK • Built for local communities
-    </footer>
   </div>
+</header>
+
+<section class="hero">
+  <h1>Hire Local Workers. Fast.</h1>
+  <p>
+    LocalJobsUK connects people who need work done with trusted local workers.
+    Post a job or find paid work in minutes.
+  </p>
+
+  <div class="cta-buttons">
+    <a href="post-job.html">Post a Job</a>
+    <a href="worker.html" class="cta-secondary">Find Work</a>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Why LocalJobsUK?</h2>
+
+  <div class="features">
+    <div class="card">
+      <h3>Local & Trusted</h3>
+      <p>Jobs are posted by real people in your local area.</p>
+    </div>
+
+    <div class="card">
+      <h3>Simple Pricing</h3>
+      <p>Workers unlock jobs using credits. No subscriptions.</p>
+    </div>
+
+    <div class="card">
+      <h3>Fast Hiring</h3>
+      <p>Job owners get up to 3 workers per job — no spam.</p>
+    </div>
+
+    <div class="card">
+      <h3>Mobile Friendly</h3>
+      <p>Works perfectly on phones, tablets and desktops.</p>
+    </div>
+  </div>
+</section>
+
+<section class="how-it-works">
+  <h2>How It Works</h2>
+
+  <div class="steps">
+    <div class="card">
+      <h3>1. Post a Job</h3>
+      <p>Describe the work and your location.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. Workers Apply</h3>
+      <p>Up to 3 local workers can unlock your job.</p>
+    </div>
+
+    <div class="card">
+      <h3>3. Get It Done</h3>
+      <p>Choose who you want and get the job completed.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 LocalJobsUK</p>
+  <p>
+    <a href="login.html">Login</a> |
+    <a href="post-job.html">Post a Job</a> |
+    <a href="worker.html">Find Work</a>
+  </p>
+</footer>
 
 </body>
 </html>
