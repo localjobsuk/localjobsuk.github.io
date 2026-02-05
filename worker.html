@@ -11,15 +11,17 @@
       max-width: 900px;
       margin: auto;
       padding: 20px;
+      background:#fafafa;
     }
     .job {
-      border: 1px solid #ccc;
+      border: 1px solid #ddd;
       padding: 15px;
       margin-bottom: 15px;
       border-radius: 8px;
+      background:white;
     }
     button {
-      padding: 8px 14px;
+      padding: 10px 16px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -27,9 +29,13 @@
       color: white;
       font-weight: bold;
     }
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
     .credits {
-      background: #f1f1f1;
-      padding: 10px;
+      background: #eef2f3;
+      padding: 12px;
       margin-bottom: 20px;
       border-radius: 8px;
     }
@@ -43,7 +49,7 @@
 <div class="credits">
   Your credits: <strong><span id="credits">...</span></strong>
   &nbsp; | &nbsp;
-  <button id="logoutBtn" style="background:#b71c1c;">Logout</button>
+  <button onclick="logout()" style="background:#b71c1c;">Logout</button>
 </div>
 
 <div id="jobs">
@@ -56,18 +62,10 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore,
-    collection,
-    getDocs,
-    doc,
-    getDoc,
-    updateDoc,
-    increment
+    getFirestore, collection, getDocs, doc, getDoc, updateDoc, increment
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
-    getAuth,
-    onAuthStateChanged,
-    signOut
+    getAuth, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -82,7 +80,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
-
   let currentUser = null;
 
   onAuthStateChanged(auth, async (user) => {
@@ -90,12 +87,11 @@
       window.location.href = "login.html";
       return;
     }
-
     currentUser = user;
 
-    const userSnap = await getDoc(doc(db, "users", user.uid));
+    const snap = await getDoc(doc(db, "users", user.uid));
     document.getElementById("credits").innerText =
-      userSnap.exists() ? userSnap.data().credits : 0;
+      snap.exists() ? snap.data().credits : 0;
 
     loadJobs();
   });
@@ -109,7 +105,6 @@
     snapshot.forEach((jobDoc) => {
       const job = jobDoc.data();
       const jobId = jobDoc.id;
-
       const unlocked = job.workersUnlocked || 0;
       const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
 
@@ -121,20 +116,22 @@
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
         <p>Status: ${status}</p>
+        ${
+          unlocked < 3
+            ? `<button onclick="unlockJob('${jobId}', this)">
+                 Unlock job (1 credit)
+               </button>`
+            : `<strong>Max workers reached</strong>`
+        }
       `;
-
-      if (unlocked < 3) {
-        const btn = document.createElement("button");
-        btn.textContent = "Unlock job (1 credit)";
-        btn.addEventListener("click", () => unlockJob(jobId));
-        div.appendChild(btn);
-      }
-
       jobsDiv.appendChild(div);
     });
   }
 
-  async function unlockJob(jobId) {
+  window.unlockJob = async (jobId, btn) => {
+    btn.disabled = true;
+    btn.innerText = "Checking credits…";
+
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
 
@@ -150,7 +147,8 @@
     }
 
     if (unlocked >= 3) {
-      alert("This job is no longer available");
+      alert("Job is no longer available");
+      loadJobs();
       return;
     }
 
@@ -162,12 +160,12 @@
       updatedUser.data().credits;
 
     loadJobs();
-  }
+  };
 
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
+  window.logout = async () => {
     await signOut(auth);
     window.location.href = "login.html";
-  });
+  };
 </script>
 
 </body>
