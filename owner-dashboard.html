@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Jobs | LocalJobsUK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .job {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      color: white;
+    }
+
+    .open { background: #0a7cff; }
+    .pending { background: #ff9800; }
+    .filled { background: #4caf50; }
+
+    .workers {
+      margin-top: 15px;
+    }
+
+    .worker {
+      padding: 8px;
+      background: #f1f1f1;
+      border-radius: 5px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #0a7cff;
+      color: white;
+    }
+
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .top-actions {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="top-actions">
+    <button onclick="goHome()">Home</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <h1>My Posted Jobs</h1>
+
+  <div id="jobsContainer">Loading jobs...</div>
+</div>
+
+<script>
+  // 🔧 YOUR FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let currentUser;
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    currentUser = user;
+    loadJobs();
+  });
+
+  async function loadJobs() {
+    const container = document.getElementById("jobsContainer");
+    container.innerHTML = "";
+
+    const snapshot = await db
+      .collection("jobs")
+      .where("ownerId", "==", currentUser.uid)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (snapshot.empty) {
+      container.innerHTML = "<p>You have not posted any jobs yet.</p>";
+      return;
+    }
+
+    snapshot.forEach(doc => {
+      const job = doc.data();
+      const jobDiv = document.createElement("div");
+      jobDiv.className = "job";
+
+      const statusClass = job.status || "open";
+
+      jobDiv.innerHTML = `
+        <div class="job-header">
+          <div>
+            <h3>${job.title || "Untitled Job"}</h3>
+            <p>${job.description || ""}</p>
+          </div>
+          <div class="status ${statusClass}">
+            ${(job.status || "open").toUpperCase()}
+          </div>
+        </div>
+
+        <div class="workers">
+          <strong>Unlocked by:</strong>
+          ${
+            job.unlockedBy && job.unlockedBy.length > 0
+              ? job.unlockedBy.map(w =>
+                  `<div class="worker">${typeof w === "string" ? w : w.email || "Worker"}</div>`
+                ).join("")
+              : "<p>No workers yet</p>"
+          }
+        </div>
+
+        <button onclick="markFilled('${doc.id}')" ${job.status === "filled" ? "disabled" : ""}>
+          Mark as Filled
+        </button>
+      `;
+
+      container.appendChild(jobDiv);
+    });
+  }
+
+  async function markFilled(jobId) {
+    if (!confirm("Mark this job as filled?")) return;
+
+    await db.collection("jobs").doc(jobId).update({
+      status: "filled"
+    });
+
+    loadJobs();
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      window.location.href = "index.html";
+    });
+  }
+
+  function goHome() {
+    window.location.href = "index.html";
+  }
+</script>
+
+</body>
+</html>
