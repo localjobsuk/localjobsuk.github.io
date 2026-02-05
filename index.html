@@ -2,65 +2,109 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LocalJobsUK</title>
+  <title>LocalJobsUK – Local Work Made Simple</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-    authDomain: "localjobsuk-fcaba.firebaseapp.com",
-    projectId: "localjobsuk-fcaba",
-    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-    messagingSenderId: "340038751338",
-    appId: "1:340038751338:web:05cca93a73a61de10d2613",
-    measurementId: "G-3VDKBGGGTN"
-  };
+<body style="
+  margin:0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  color:#333;
+">
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
+  <!-- HERO SECTION -->
+  <div style="
+    background: linear-gradient(135deg, #1565c0, #2e7d32);
+    color: white;
+    padding: 80px 20px;
+    text-align: center;
+  ">
+    <h1 style="font-size:48px; margin-bottom:10px;">LocalJobsUK</h1>
+    <p style="font-size:20px; margin-bottom:40px;">
+      Post local jobs. Find local workers. Simple.
+    </p>
 
-<body style="font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px;">
-
-  <h1>LocalJobsUK</h1>
-  <p><strong>Post local jobs. Find local workers. Simple.</strong></p>
-
-  <div style="margin: 30px 0;">
-    <a href="post-job.html"
-       style="display:inline-block; padding:15px 25px; margin-right:10px;
-              background:#2e7d32; color:white; text-decoration:none; border-radius:5px;">
+    <a href="post-job.html" style="
+      display:inline-block;
+      padding:15px 30px;
+      background:white;
+      color:#1565c0;
+      text-decoration:none;
+      border-radius:30px;
+      font-weight:bold;
+      margin-right:10px;
+    ">
       Post a Job
     </a>
 
-    <a href="worker.html"
-       style="display:inline-block; padding:15px 25px;
-              background:#1565c0; color:white; text-decoration:none; border-radius:5px;">
+    <a href="worker.html" style="
+      display:inline-block;
+      padding:15px 30px;
+      background:#2e7d32;
+      color:white;
+      text-decoration:none;
+      border-radius:30px;
+      font-weight:bold;
+    ">
       I'm a Worker
     </a>
   </div>
 
-  <hr>
+  <!-- CONTENT -->
+  <div style="max-width:900px; margin:auto; padding:50px 20px;">
 
-  <h2>How it works</h2>
-  <ol>
-    <li>Job owners post a job with photos</li>
-    <li>Workers browse local jobs</li>
-    <li>Workers unlock jobs using credits</li>
-    <li>Chat starts on the platform</li>
-  </ol>
+    <h2 style="text-align:center; margin-bottom:30px;">How it works</h2>
 
-  <p style="color: green;">
-    ✅ Website is live and working
-  </p>
+    <div style="
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:20px;
+    ">
+
+      <div style="background:white; padding:25px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+        <h3>📸 Post a job</h3>
+        <p>Job owners post local work with photos and details.</p>
+      </div>
+
+      <div style="background:white; padding:25px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+        <h3>🔍 Find workers</h3>
+        <p>Self-employed workers browse nearby jobs.</p>
+      </div>
+
+      <div style="background:white; padding:25px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+        <h3>💳 Unlock with credits</h3>
+        <p>Workers unlock jobs using credits for fair access.</p>
+      </div>
+
+      <div style="background:white; padding:25px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+        <h3>💬 Get it done</h3>
+        <p>Chat, schedule, and complete the job offline.</p>
+      </div>
+
+    </div>
+
+    <p style="
+      margin-top:40px;
+      text-align:center;
+      color:#2e7d32;
+      font-weight:bold;
+    ">
+      ✅ Website is live and working
+    </p>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="
+    background:#222;
+    color:#aaa;
+    text-align:center;
+    padding:20px;
+    font-size:14px;
+  ">
+    © 2026 LocalJobsUK · Built for local communities
+  </div>
 
 </body>
 </html>
