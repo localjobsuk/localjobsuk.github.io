@@ -21,13 +21,18 @@
     }
 
     button {
-      padding: 8px 14px;
+      padding: 10px 16px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
       background: #203a43;
       color: white;
       font-weight: bold;
+    }
+
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
     }
 
     .credits {
@@ -41,137 +46,135 @@
 
 <body>
 
-  <h2>Available Jobs</h2>
+<h2>Available Jobs</h2>
 
-  <div class="credits">
-    Your credits: <strong><span id="credits">...</span></strong>
-    &nbsp; | &nbsp;
-    <button onclick="logout()" style="background:#b71c1c;">Logout</button>
-  </div>
+<div class="credits">
+  Your credits: <strong><span id="credits">...</span></strong>
+  &nbsp; | &nbsp;
+  <button id="logoutBtn" style="background:#b71c1c;">Logout</button>
+</div>
 
-  <div id="jobs">
-    <p>Loading jobs…</p>
-  </div>
+<div id="jobs">
+  <p>Loading jobs…</p>
+</div>
 
-  <br>
-  <a href="index.html">← Back to home</a>
+<br>
+<a href="index.html">← Back to home</a>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      doc,
-      getDoc,
-      updateDoc,
-      increment
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    doc,
+    getDoc,
+    updateDoc,
+    increment
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-      authDomain: "localjobsuk-fcaba.firebaseapp.com",
-      projectId: "localjobsuk-fcaba",
-      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-      messagingSenderId: "340038751338",
-      appId: "1:340038751338:web:05cca93a73a61de10d2613"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+    authDomain: "localjobsuk-fcaba.firebaseapp.com",
+    projectId: "localjobsuk-fcaba",
+    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+    messagingSenderId: "340038751338",
+    appId: "1:340038751338:web:05cca93a73a61de10d2613"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-    let currentUser = null;
+  let currentUser = null;
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
-
-      currentUser = user;
-
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      document.getElementById("credits").innerText =
-        userSnap.exists() ? userSnap.data().credits : 0;
-
-      loadJobs();
-    });
-
-    async function loadJobs() {
-      const jobsDiv = document.getElementById("jobs");
-      jobsDiv.innerHTML = "";
-
-      const snapshot = await getDocs(collection(db, "jobs"));
-
-      snapshot.forEach((jobDoc) => {
-        const job = jobDoc.data();
-        const jobId = jobDoc.id;
-
-        const unlocked = job.workersUnlocked || 0;
-        const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
-
-        const div = document.createElement("div");
-        div.className = "job";
-
-        div.innerHTML = `
-          <h3>${job.title}</h3>
-          <p><strong>Location:</strong> ${job.location}</p>
-          <p>${job.description}</p>
-          <p>Status: ${status}</p>
-          ${
-            unlocked < 3
-              ? `<button onclick="unlockJob('${jobId}')">
-                   Unlock job (1 credit)
-                 </button>`
-              : ""
-          }
-        `;
-
-        jobsDiv.appendChild(div);
-      });
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
     }
 
-    window.unlockJob = async (jobId) => {
-      const userRef = doc(db, "users", currentUser.uid);
-      const jobRef = doc(db, "jobs", jobId);
+    currentUser = user;
 
-      const userSnap = await getDoc(userRef);
-      const jobSnap = await getDoc(jobRef);
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    document.getElementById("credits").innerText =
+      userSnap.exists() ? userSnap.data().credits : 0;
 
-      const credits = userSnap.data().credits || 0;
-      const unlocked = jobSnap.data().workersUnlocked || 0;
+    loadJobs();
+  });
 
-      if (credits < 1) {
-        window.location.href = "buy-credits.html";
-        return;
-      }
+  async function loadJobs() {
+    const jobsDiv = document.getElementById("jobs");
+    jobsDiv.innerHTML = "";
 
-      if (unlocked >= 3) {
-        alert("This job is no longer available");
-        return;
-      }
+    const snapshot = await getDocs(collection(db, "jobs"));
 
-      await updateDoc(userRef, { credits: increment(-1) });
-      await updateDoc(jobRef, { workersUnlocked: increment(1) });
+    snapshot.forEach((jobDoc) => {
+      const job = jobDoc.data();
+      const jobId = jobDoc.id;
+      const unlocked = job.workersUnlocked || 0;
+      const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
 
-      const updatedUser = await getDoc(userRef);
-      document.getElementById("credits").innerText =
-        updatedUser.data().credits;
+      const div = document.createElement("div");
+      div.className = "job";
 
-      loadJobs();
-    };
+      const btn = document.createElement("button");
+      btn.textContent = "Unlock job (1 credit)";
+      btn.disabled = unlocked >= 3;
+      btn.addEventListener("click", () => unlockJob(jobId));
 
-    window.logout = async () => {
-      await signOut(auth);
-      window.location.href = "login.html";
-    };
-  </script>
+      div.innerHTML = `
+        <h3>${job.title}</h3>
+        <p><strong>Location:</strong> ${job.location}</p>
+        <p>${job.description}</p>
+        <p>Status: ${status}</p>
+      `;
+
+      if (unlocked < 3) div.appendChild(btn);
+      jobsDiv.appendChild(div);
+    });
+  }
+
+  async function unlockJob(jobId) {
+    const userRef = doc(db, "users", currentUser.uid);
+    const jobRef = doc(db, "jobs", jobId);
+
+    const userSnap = await getDoc(userRef);
+    const jobSnap = await getDoc(jobRef);
+
+    const credits = userSnap.data().credits || 0;
+    const unlocked = jobSnap.data().workersUnlocked || 0;
+
+    if (credits < 1) {
+      window.location.assign("https://localjobsuk.github.io/buy-credits.html");
+      return;
+    }
+
+    if (unlocked >= 3) {
+      alert("This job is no longer available");
+      return;
+    }
+
+    await updateDoc(userRef, { credits: increment(-1) });
+    await updateDoc(jobRef, { workersUnlocked: increment(1) });
+
+    const updatedUser = await getDoc(userRef);
+    document.getElementById("credits").innerText =
+      updatedUser.data().credits;
+
+    loadJobs();
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.href = "login.html";
+  });
+</script>
 
 </body>
 </html>
