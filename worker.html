@@ -27,6 +27,9 @@
       color: white;
       font-weight: bold;
     }
+    .buy-btn {
+      background: #ff9800;
+    }
     button:disabled {
       background: #888;
       cursor: not-allowed;
@@ -88,6 +91,7 @@
   const auth = getAuth(app);
 
   let currentUser = null;
+  let userCredits = 0;
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -98,8 +102,8 @@
     currentUser = user;
 
     const userSnap = await getDoc(doc(db, "users", user.uid));
-    document.getElementById("credits").innerText =
-      userSnap.exists() ? userSnap.data().credits : 0;
+    userCredits = userSnap.exists() ? userSnap.data().credits : 0;
+    document.getElementById("credits").innerText = userCredits;
 
     loadJobs();
   });
@@ -120,56 +124,49 @@
       const div = document.createElement("div");
       div.className = "job";
 
+      let actionButton = "";
+
+      if (unlocked < 3) {
+        if (userCredits > 0) {
+          actionButton = `
+            <button onclick="unlockJob('${jobId}', this)">
+              Unlock job (1 credit)
+            </button>`;
+        } else {
+          actionButton = `
+            <button class="buy-btn" onclick="location.href='buy-credits.html'">
+              Buy credits to unlock
+            </button>`;
+        }
+      }
+
       div.innerHTML = `
         <h3>${job.title}</h3>
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
         <p>Status: ${status}</p>
-        ${
-          unlocked < 3
-            ? `<button onclick="unlockJob('${jobId}', this)">
-                 Unlock job (1 credit)
-               </button>`
-            : ""
-        }
+        ${actionButton}
       `;
 
       jobsDiv.appendChild(div);
     });
   }
 
-  // ✅ FIXED UNLOCK LOGIC (NO FREEZE, INSTANT REDIRECT)
   window.unlockJob = async function (jobId, btn) {
     btn.disabled = true;
-    btn.innerText = "Checking credits…";
-
-    const displayedCredits =
-      parseInt(document.getElementById("credits").innerText || "0");
-
-    if (displayedCredits < 1) {
-      window.location.href = "buy-credits.html";
-      return;
-    }
+    btn.innerText = "Processing…";
 
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
-
-    const jobSnap = await getDoc(jobRef);
-    const unlocked = jobSnap.data().workersUnlocked || 0;
-
-    if (unlocked >= 3) {
-      alert("This job is no longer available");
-      loadJobs();
-      return;
-    }
 
     await updateDoc(userRef, { credits: increment(-1) });
     await updateDoc(jobRef, { workersUnlocked: increment(1) });
 
     const updatedUser = await getDoc(userRef);
-    document.getElementById("credits").innerText =
-      updatedUser.data().credits;
+    userCredits = updatedUser.data().credits;
+    document.getElementById("credits").innerText = userCredits;
 
+    alert("✅ Job unlocked successfully");
     loadJobs();
   };
 
