@@ -100,7 +100,10 @@
     loadJobs();
   });
 
-  async function loadJobs() {
+ function unlockJob(jobId) {
+  alert("UNLOCK BUTTON CLICKED: " + jobId);
+}
+
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
 
