@@ -43,7 +43,7 @@
 <div class="credits">
   Your credits: <strong><span id="credits">...</span></strong>
   &nbsp; | &nbsp;
-  <button onclick="logout()" style="background:#b71c1c;">Logout</button>
+  <button id="logoutBtn" style="background:#b71c1c;">Logout</button>
 </div>
 
 <div id="jobs">
@@ -121,21 +121,20 @@
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
         <p>Status: ${status}</p>
-        ${
-          unlocked < 3
-            ? `<button onclick="unlockJob('${jobId}')">
-                 Unlock job (1 credit)
-               </button>`
-            : ""
-        }
       `;
+
+      if (unlocked < 3) {
+        const btn = document.createElement("button");
+        btn.textContent = "Unlock job (1 credit)";
+        btn.addEventListener("click", () => unlockJob(jobId));
+        div.appendChild(btn);
+      }
 
       jobsDiv.appendChild(div);
     });
   }
 
-  // ✅ MUST be on window
-  window.unlockJob = async function (jobId) {
+  async function unlockJob(jobId) {
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
 
@@ -163,12 +162,12 @@
       updatedUser.data().credits;
 
     loadJobs();
-  };
+  }
 
-  window.logout = async function () {
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "login.html";
-  };
+  });
 </script>
 
 </body>
