@@ -4,11 +4,49 @@
   <meta charset="UTF-8">
   <title>Available Jobs – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .job {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #203a43;
+      color: white;
+      font-weight: bold;
+    }
+
+    .credits {
+      background: #f1f1f1;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 
-<body style="font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px;">
+<body>
 
 <h2>Available Jobs</h2>
+
+<div class="credits">
+  Your credits: <strong id="credits">...</strong>
+</div>
+
 <div id="jobs">Loading jobs…</div>
 
 <br>
@@ -17,11 +55,17 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore, collection, getDocs, doc,
-    getDoc, updateDoc, increment
+    getFirestore,
+    collection,
+    getDocs,
+    doc,
+    getDoc,
+    updateDoc,
+    increment
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
-    getAuth, onAuthStateChanged
+    getAuth,
+    onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -37,10 +81,25 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-  let currentUser = null;
+  let currentUser;
+  let userCredits = 0;
 
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth, async user => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
     currentUser = user;
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      userCredits = userSnap.data().credits || 0;
+      document.getElementById("credits").innerText = userCredits;
+    }
+
     loadJobs();
   });
 
@@ -50,101 +109,61 @@
 
     const snapshot = await getDocs(collection(db, "jobs"));
 
-    snapshot.forEach(jobDoc => {
-      const job = jobDoc.data();
-      const unlocked = job.workersUnlocked || 0;
+    snapshot.forEach(docSnap => {
+      const job = docSnap.data();
+      const jobId = docSnap.id;
 
-      let status = "🟢 Available";
-      if (unlocked >= 3) status = "🟡 Pending";
+      const unlocked = job.workersUnlocked || 0;
+      const status =
+        unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
 
       const div = document.createElement("div");
-      div.style.border = "1px solid #ccc";
-      div.style.padding = "15px";
-      div.style.marginBottom = "12px";
+      div.className = "job";
 
       div.innerHTML = `
         <h3>${job.title}</h3>
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
-        <p><strong>Status:</strong> ${status}</p>
-        ${unlocked < 3 ? `<button>Unlock job (1 credit)</button>` : ""}
+        <p>Status: ${status}</p>
+        ${unlocked < 3 ? `<button onclick="unlockJob('${jobId}')">Unlock job (1 credit)</button>` : ""}
       `;
-
-      if (unlocked < 3) {
-        div.querySelector("button").onclick = () =>
-          unlockJob(jobDoc.id);
-      }
 
       jobsDiv.appendChild(div);
     });
   }
 
-  async function unlockJob(jobId) {
-    if (!currentUser) {
-      alert("Please log in first");
-      return;
-    }
-
-    const userRef = doc(db, "users", currentUser.uid);
-    const jobRef = doc(db, "jobs", jobId);
-
-    const userSnap = await getDoc(userRef);
-    const jobSnap = await getDoc(jobRef);
-
-    if (!userSnap.exists()) {
-      alert("User profile not found");
-      return;
-    }
-
-    const credits = userSnap.data().credits || 0;
-    const unlocked = jobSnap.data().workersUnlocked || 0;
-
-    if (credits < 1) {
+  window.unlockJob = async (jobId) => {
+    if (userCredits < 1) {
       alert("Not enough credits");
       return;
     }
 
-    if (unlocked >= 3) {
+    const jobRef = doc(db, "jobs", jobId);
+    const jobSnap = await getDoc(jobRef);
+
+    if (!jobSnap.exists()) return;
+
+    const jobData = jobSnap.data();
+
+    if ((jobData.workersUnlocked || 0) >= 3) {
       alert("Job already pending");
       return;
     }
 
-    await updateDoc(userRef, {
+    // deduct credit
+    await updateDoc(doc(db, "users", currentUser.uid), {
       credits: increment(-1)
     });
 
+    // increment workers
     await updateDoc(jobRef, {
       workersUnlocked: increment(1)
     });
 
-    alert("Job unlocked successfully!");
-    loadJobs();
-  }
+    alert("Job unlocked!");
+    location.reload();
+  };
 </script>
 
 </body>
 </html>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-    authDomain: "localjobsuk-fcaba.firebaseapp.com",
-    projectId: "localjobsuk-fcaba",
-    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-    messagingSenderId: "340038751338",
-    appId: "1:340038751338:web:05cca93a73a61de10d2613"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      window.location.href = "login.html";
-    }
-  });
-</script>
-
