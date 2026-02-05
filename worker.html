@@ -161,9 +161,9 @@
     const unlocked = jobSnap.data().workersUnlocked || 0;
 
     if (credits < 1) {
-      alert("Not enough credits");
-      return;
-    }
+  window.location.href = "buy-credits.html";
+  return;
+}
 
     if (unlocked >= 3) {
       alert("This job is no longer available");
