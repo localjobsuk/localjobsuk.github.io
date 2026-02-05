@@ -124,3 +124,27 @@
 
 </body>
 </html>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+    authDomain: "localjobsuk-fcaba.firebaseapp.com",
+    projectId: "localjobsuk-fcaba",
+    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+    messagingSenderId: "340038751338",
+    appId: "1:340038751338:web:05cca93a73a61de10d2613"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      window.location.href = "login.html";
+    }
+  });
+</script>
+
