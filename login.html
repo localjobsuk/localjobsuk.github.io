@@ -4,86 +4,72 @@
   <meta charset="UTF-8">
   <title>Login – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Firebase --><script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-    authDomain: "localjobsuk-fcaba.firebaseapp.com",
-    projectId: "localjobsuk-fcaba",
-    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-    messagingSenderId: "340038751338",
-    appId: "1:340038751338:web:05cca93a73a61de10d2613"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  window.signUp = async function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Give 10 credits on first signup
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        credits: 10,
-        createdAt: new Date()
-      });
-
-      alert("Account created! You received 10 free credits.");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  window.login = async function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Logged in successfully");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-</script>
 </head>
 
 <body style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 40px;">
 
-  <h2>LocalJobsUK</h2>
+  <h2>Login / Sign up</h2>
 
-  <input id="email" type="email" placeholder="Email"
-         style="width:100%; padding:10px; margin-bottom:10px;">
+  <input id="email" type="email" placeholder="Email" style="width:100%; padding:10px;"><br><br>
+  <input id="password" type="password" placeholder="Password" style="width:100%; padding:10px;"><br><br>
 
-  <input id="password" type="password" placeholder="Password"
-         style="width:100%; padding:10px; margin-bottom:20px;">
+  <button id="loginBtn" style="width:100%; padding:10px;">Login / Sign up</button>
 
-  <button onclick="signUp()"
-          style="width:100%; padding:12px; margin-bottom:10px;
-                 background:#2e7d32; color:white; border:none;">
-    Sign Up (Get 10 Free Credits)
-  </button>
+  <p id="msg"></p>
 
-  <button onclick="login()"
-          style="width:100%; padding:12px;
-                 background:#1565c0; color:white; border:none;">
-    Login
-  </button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  <br><br>
-  <a href="index.html">← Back to home</a>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+      authDomain: "localjobsuk-fcaba.firebaseapp.com",
+      projectId: "localjobsuk-fcaba",
+      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+      messagingSenderId: "340038751338",
+      appId: "1:340038751338:web:05cca93a73a61de10d2613"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const msg = document.getElementById("msg");
+
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        msg.innerText = "Logged in successfully!";
+        setTimeout(() => {
+          window.location.href = "worker.html";
+        }, 800);
+
+      } catch {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+        const userRef = doc(db, "users", userCred.user.uid);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          await setDoc(userRef, {
+            email: email,
+            credits: 10,
+            createdAt: new Date()
+          });
+        }
+
+        msg.innerText = "Account created! Redirecting...";
+        setTimeout(() => {
+          window.location.href = "worker.html";
+        }, 800);
+      }
+    };
+  </script>
 
 </body>
 </html>
