@@ -19,8 +19,12 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } 
       from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -36,18 +40,22 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const msg = document.getElementById("msg");
+
+    // 🔁 AUTO REDIRECT WHEN LOGGED IN
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.replace("worker.html");
+      }
+    });
 
     document.getElementById("loginBtn").onclick = async () => {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      const msg = document.getElementById("msg");
 
       try {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        msg.innerText = "Logged in successfully!";
-        setTimeout(() => {
-          window.location.href = "worker.html";
-        }, 800);
+        await signInWithEmailAndPassword(auth, email, password);
+        msg.innerText = "Logged in successfully…";
 
       } catch {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
@@ -63,10 +71,7 @@
           });
         }
 
-        msg.innerText = "Account created! Redirecting...";
-        setTimeout(() => {
-          window.location.href = "worker.html";
-        }, 800);
+        msg.innerText = "Account created…";
       }
     };
   </script>
