@@ -4,77 +4,110 @@
   <meta charset="UTF-8">
   <title>Login – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #203a43;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .box {
+      background: white;
+      color: #203a43;
+      padding: 30px;
+      border-radius: 10px;
+      width: 320px;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .login {
+      background: #203a43;
+      color: white;
+    }
+
+    .google {
+      background: #4285F4;
+      color: white;
+    }
+  </style>
 </head>
 
-<body style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 40px;">
+<body>
 
-  <h2>Login / Sign up</h2>
+<div class="box">
+  <h2>Login</h2>
 
-  <input id="email" type="email" placeholder="Email" style="width:100%; padding:10px;"><br><br>
-  <input id="password" type="password" placeholder="Password" style="width:100%; padding:10px;"><br><br>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
 
-  <button id="loginBtn" style="width:100%; padding:10px;">Login / Sign up</button>
+  <button class="login" onclick="emailLogin()">Login</button>
+  <button class="google" onclick="googleLogin()">Sign in with Google</button>
+</div>
 
-  <p id="msg"></p>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { 
+    getAuth,
+    signInWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-      getAuth, 
-      signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+    authDomain: "localjobsuk-fcaba.firebaseapp.com",
+    projectId: "localjobsuk-fcaba",
+    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+    messagingSenderId: "340038751338",
+    appId: "1:340038751338:web:05cca93a73a61de10d2613"
+  };
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-      authDomain: "localjobsuk-fcaba.firebaseapp.com",
-      projectId: "localjobsuk-fcaba",
-      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-      messagingSenderId: "340038751338",
-      appId: "1:340038751338:web:05cca93a73a61de10d2613"
-    };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const msg = document.getElementById("msg");
+  // AUTO REDIRECT IF ALREADY LOGGED IN
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      window.location.href = "worker.html";
+    }
+  });
 
-    // 🔁 AUTO REDIRECT WHEN LOGGED IN
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.replace("worker.html");
-      }
-    });
+  window.emailLogin = async () => {
+    await signInWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    );
+  };
 
-    document.getElementById("loginBtn").onclick = async () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        msg.innerText = "Logged in successfully…";
-
-      } catch {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-
-        const userRef = doc(db, "users", userCred.user.uid);
-        const snap = await getDoc(userRef);
-
-        if (!snap.exists()) {
-          await setDoc(userRef, {
-            email: email,
-            credits: 10,
-            createdAt: new Date()
-          });
-        }
-
-        msg.innerText = "Account created…";
-      }
-    };
-  </script>
+  window.googleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
+</script>
 
 </body>
 </html>
