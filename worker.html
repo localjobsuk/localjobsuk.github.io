@@ -43,7 +43,7 @@
 <div class="credits">
   Your credits: <strong><span id="credits">...</span></strong>
   &nbsp; | &nbsp;
-  <button id="logoutBtn" style="background:#b71c1c;">Logout</button>
+  <button onclick="logout()" style="background:#b71c1c;">Logout</button>
 </div>
 
 <div id="jobs">
@@ -100,10 +100,7 @@
     loadJobs();
   });
 
- function unlockJob(jobId) {
-  alert("UNLOCK BUTTON CLICKED: " + jobId);
-}
-
+  async function loadJobs() {
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
 
@@ -126,21 +123,19 @@
         <p>Status: ${status}</p>
         ${
           unlocked < 3
-            ? `<button data-job="${jobId}">Unlock job (1 credit)</button>`
+            ? `<button onclick="unlockJob('${jobId}')">
+                 Unlock job (1 credit)
+               </button>`
             : ""
         }
       `;
 
       jobsDiv.appendChild(div);
     });
-
-    // 🔑 Attach click listeners AFTER rendering
-    document.querySelectorAll("button[data-job]").forEach(btn => {
-      btn.addEventListener("click", () => unlockJob(btn.dataset.job));
-    });
   }
 
-  async function unlockJob(jobId) {
+  // ✅ MUST be on window
+  window.unlockJob = async function (jobId) {
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
 
@@ -163,16 +158,17 @@
     await updateDoc(userRef, { credits: increment(-1) });
     await updateDoc(jobRef, { workersUnlocked: increment(1) });
 
+    const updatedUser = await getDoc(userRef);
     document.getElementById("credits").innerText =
-      (await getDoc(userRef)).data().credits;
+      updatedUser.data().credits;
 
     loadJobs();
-  }
+  };
 
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
+  window.logout = async function () {
     await signOut(auth);
     window.location.href = "login.html";
-  });
+  };
 </script>
 
 </body>
