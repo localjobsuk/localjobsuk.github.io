@@ -11,17 +11,15 @@
       max-width: 900px;
       margin: auto;
       padding: 20px;
-      background:#fafafa;
     }
     .job {
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       padding: 15px;
       margin-bottom: 15px;
       border-radius: 8px;
-      background:white;
     }
     button {
-      padding: 10px 16px;
+      padding: 8px 14px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -30,12 +28,12 @@
       font-weight: bold;
     }
     button:disabled {
-      background: #999;
+      background: #888;
       cursor: not-allowed;
     }
     .credits {
-      background: #eef2f3;
-      padding: 12px;
+      background: #f1f1f1;
+      padding: 10px;
       margin-bottom: 20px;
       border-radius: 8px;
     }
@@ -62,10 +60,18 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import {
-    getFirestore, collection, getDocs, doc, getDoc, updateDoc, increment
+    getFirestore,
+    collection,
+    getDocs,
+    doc,
+    getDoc,
+    updateDoc,
+    increment
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
-    getAuth, onAuthStateChanged, signOut
+    getAuth,
+    onAuthStateChanged,
+    signOut
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -80,6 +86,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
+
   let currentUser = null;
 
   onAuthStateChanged(auth, async (user) => {
@@ -87,11 +94,12 @@
       window.location.href = "login.html";
       return;
     }
+
     currentUser = user;
 
-    const snap = await getDoc(doc(db, "users", user.uid));
+    const userSnap = await getDoc(doc(db, "users", user.uid));
     document.getElementById("credits").innerText =
-      snap.exists() ? snap.data().credits : 0;
+      userSnap.exists() ? userSnap.data().credits : 0;
 
     loadJobs();
   });
@@ -105,6 +113,7 @@
     snapshot.forEach((jobDoc) => {
       const job = jobDoc.data();
       const jobId = jobDoc.id;
+
       const unlocked = job.workersUnlocked || 0;
       const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
 
@@ -121,33 +130,35 @@
             ? `<button onclick="unlockJob('${jobId}', this)">
                  Unlock job (1 credit)
                </button>`
-            : `<strong>Max workers reached</strong>`
+            : ""
         }
       `;
+
       jobsDiv.appendChild(div);
     });
   }
 
-  window.unlockJob = async (jobId, btn) => {
+  // ✅ FIXED UNLOCK LOGIC (NO FREEZE, INSTANT REDIRECT)
+  window.unlockJob = async function (jobId, btn) {
     btn.disabled = true;
     btn.innerText = "Checking credits…";
 
-    const userRef = doc(db, "users", currentUser.uid);
-    const jobRef = doc(db, "jobs", jobId);
+    const displayedCredits =
+      parseInt(document.getElementById("credits").innerText || "0");
 
-    const userSnap = await getDoc(userRef);
-    const jobSnap = await getDoc(jobRef);
-
-    const credits = userSnap.data().credits || 0;
-    const unlocked = jobSnap.data().workersUnlocked || 0;
-
-    if (credits < 1) {
+    if (displayedCredits < 1) {
       window.location.href = "buy-credits.html";
       return;
     }
 
+    const userRef = doc(db, "users", currentUser.uid);
+    const jobRef = doc(db, "jobs", jobId);
+
+    const jobSnap = await getDoc(jobRef);
+    const unlocked = jobSnap.data().workersUnlocked || 0;
+
     if (unlocked >= 3) {
-      alert("Job is no longer available");
+      alert("This job is no longer available");
       loadJobs();
       return;
     }
@@ -162,7 +173,7 @@
     loadJobs();
   };
 
-  window.logout = async () => {
+  window.logout = async function () {
     await signOut(auth);
     window.location.href = "login.html";
   };
