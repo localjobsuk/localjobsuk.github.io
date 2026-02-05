@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Approve Jobs</title>
+</head>
+<body>
+
+<h2>Pending Jobs (Admin)</h2>
+<div id="jobs"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  updateDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+  projectId: "localjobsuk-fcaba"
+});
+
+const db = getFirestore(app);
+const jobsDiv = document.getElementById("jobs");
+
+const snap = await getDocs(collection(db, "jobs"));
+
+snap.forEach(jobDoc => {
+  const job = jobDoc.data();
+  if (job.status !== "pending_approval") return;
+
+  const selectOptions = Array.from({ length: 20 }, (_, i) =>
+    `<option value="${i + 1}">${i + 1} credits</option>`
+  ).join("");
+
+  const div = document.createElement("div");
+  div.style.border = "1px solid #ccc";
+  div.style.padding = "10px";
+  div.style.marginBottom = "10px";
+
+  div.innerHTML = `
+    <h3>${job.title}</h3>
+    <p>${job.description}</p>
+
+    <label>Credit cost:</label>
+    <select id="cost-${jobDoc.id}">
+      ${selectOptions}
+    </select>
+
+    <br><br>
+    <button onclick="approveJob('${jobDoc.id}')">Approve</button>
+  `;
+
+  jobsDiv.appendChild(div);
+});
+
+window.approveJob = async (jobId) => {
+  const cost = parseInt(document.getElementById(`cost-${jobId}`).value);
+
+  if (cost < 1 || cost > 20) {
+    alert("Credit cost must be between 1 and 20");
+    return;
+  }
+
+  await updateDoc(doc(db, "jobs", jobId), {
+    creditCost: cost,
+    status: "approved"
+  });
+
+  alert("✅ Job approved");
+  location.reload();
+};
+</script>
+
+</body>
+</html>
