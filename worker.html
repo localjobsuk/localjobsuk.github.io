@@ -18,10 +18,12 @@
   <a href="index.html">← Back to home</a>
 
   <!-- Firebase script MUST be at bottom on GitHub Pages -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+ <script type="module">
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    "<p style='color:green;'>JS is running ✅</p>"
+  );
+</script>
 
     const firebaseConfig = {
       apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
