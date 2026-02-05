@@ -12,16 +12,14 @@
       margin: auto;
       padding: 20px;
     }
-
     .job {
       border: 1px solid #ccc;
       padding: 15px;
       margin-bottom: 15px;
       border-radius: 8px;
     }
-
     button {
-      padding: 10px 16px;
+      padding: 8px 14px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -29,12 +27,6 @@
       color: white;
       font-weight: bold;
     }
-
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-
     .credits {
       background: #f1f1f1;
       padding: 10px;
@@ -117,26 +109,31 @@
     snapshot.forEach((jobDoc) => {
       const job = jobDoc.data();
       const jobId = jobDoc.id;
+
       const unlocked = job.workersUnlocked || 0;
       const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
 
       const div = document.createElement("div");
       div.className = "job";
 
-      const btn = document.createElement("button");
-      btn.textContent = "Unlock job (1 credit)";
-      btn.disabled = unlocked >= 3;
-      btn.addEventListener("click", () => unlockJob(jobId));
-
       div.innerHTML = `
         <h3>${job.title}</h3>
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
         <p>Status: ${status}</p>
+        ${
+          unlocked < 3
+            ? `<button data-job="${jobId}">Unlock job (1 credit)</button>`
+            : ""
+        }
       `;
 
-      if (unlocked < 3) div.appendChild(btn);
       jobsDiv.appendChild(div);
+    });
+
+    // 🔑 Attach click listeners AFTER rendering
+    document.querySelectorAll("button[data-job]").forEach(btn => {
+      btn.addEventListener("click", () => unlockJob(btn.dataset.job));
     });
   }
 
@@ -151,7 +148,7 @@
     const unlocked = jobSnap.data().workersUnlocked || 0;
 
     if (credits < 1) {
-      window.location.assign("https://localjobsuk.github.io/buy-credits.html");
+      window.location.href = "buy-credits.html";
       return;
     }
 
@@ -163,9 +160,8 @@
     await updateDoc(userRef, { credits: increment(-1) });
     await updateDoc(jobRef, { workersUnlocked: increment(1) });
 
-    const updatedUser = await getDoc(userRef);
     document.getElementById("credits").innerText =
-      updatedUser.data().credits;
+      (await getDoc(userRef)).data().credits;
 
     loadJobs();
   }
