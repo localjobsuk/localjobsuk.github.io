@@ -165,7 +165,21 @@
 
     alert("Job unlocked!");
     location.reload();
-  };
+  };import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 </script>
 
 </body>
