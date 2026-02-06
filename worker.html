@@ -18,6 +18,13 @@
       margin-bottom: 15px;
       border-radius: 8px;
     }
+    h3 a {
+      color: #203a43;
+      text-decoration: none;
+    }
+    h3 a:hover {
+      text-decoration: underline;
+    }
     button {
       padding: 8px 14px;
       border: none;
@@ -130,7 +137,12 @@
       div.className = "job";
 
       div.innerHTML = `
-        <h3>${job.title}</h3>
+        <h3>
+          <a href="job-details.html?id=${jobId}">
+            ${job.title}
+          </a>
+        </h3>
+
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
 
