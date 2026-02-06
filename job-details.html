@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Details – LocalJobsUK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+}
+.card {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+}
+img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #203a43;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:disabled {
+  background: #999;
+}
+.badge {
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:13px;
+  margin-right:6px;
+}
+</style>
+</head>
+
+<body>
+
+<a href="worker.html">← Back to jobs</a>
+
+<div class="card">
+  <h2 id="title">Loading…</h2>
+  <p><strong>Location:</strong> <span id="location"></span></p>
+  <p id="description"></p>
+
+  <div id="images"></div>
+
+  <p><strong>Job cost:</strong> <span id="cost"></span> credits</p>
+
+  <div style="margin:10px 0;">
+    <span class="badge" style="background:#e8f5e9;">✅ Email verified</span>
+    <span class="badge" style="background:#e3f2fd;">🔐 Google account</span>
+  </div>
+
+  <button id="unlockBtn">Unlock job</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+  authDomain: "localjobsuk-fcaba.firebaseapp.com",
+  projectId: "localjobsuk-fcaba",
+  storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+  messagingSenderId: "340038751338",
+  appId: "1:340038751338:web:05cca93a73a61de10d2613"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const params = new URLSearchParams(window.location.search);
+const jobId = params.get("id");
+
+let currentUser;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+  currentUser = user;
+  loadJob();
+});
+
+async function loadJob() {
+  const jobRef = doc(db, "jobs", jobId);
+  const jobSnap = await getDoc(jobRef);
+  if (!jobSnap.exists()) return;
+
+  const job = jobSnap.data();
+
+  document.getElementById("title").innerText = job.title;
+  document.getElementById("location").innerText = job.location;
+  document.getElementById("description").innerText = job.description;
+  document.getElementById("cost").innerText = job.creditCost || 1;
+
+  const imgDiv = document.getElementById("images");
+  if (job.images) {
+    job.images.forEach(url => {
+      const img = document.createElement("img");
+      img.src = url;
+      imgDiv.appendChild(img);
+    });
+  }
+
+  document.getElementById("unlockBtn").onclick = () => unlockJob(job.creditCost || 1);
+}
+
+async function unlockJob(cost) {
+  const userRef = doc(db, "users", currentUser.uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists() || userSnap.data().credits < cost) {
+    window.location.href = "buy-credits.html";
+    return;
+  }
+
+  await updateDoc(userRef, { credits: increment(-cost) });
+  alert("Job unlocked. Owner contact revealed.");
+}
+</script>
+
+</body>
+</html>
