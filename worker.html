@@ -27,14 +27,23 @@
       color: white;
       font-weight: bold;
     }
-    .buy-btn {
-      background: #ff9800;
+    button:disabled {
+      background: #888;
+      cursor: not-allowed;
     }
     .credits {
       background: #f1f1f1;
       padding: 10px;
       margin-bottom: 20px;
       border-radius: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-right: 6px;
+      margin-top: 6px;
     }
   </style>
 </head>
@@ -44,7 +53,7 @@
 <h2>Available Jobs</h2>
 
 <div class="credits">
-  Your credits: <strong><span id="credits">0</span></strong>
+  Your credits: <strong><span id="credits">...</span></strong>
   &nbsp; | &nbsp;
   <button onclick="logout()" style="background:#b71c1c;">Logout</button>
 </div>
@@ -97,8 +106,8 @@
     currentUser = user;
 
     const userSnap = await getDoc(doc(db, "users", user.uid));
-    const credits = userSnap.exists() ? userSnap.data().credits : 0;
-    document.getElementById("credits").innerText = credits;
+    document.getElementById("credits").innerText =
+      userSnap.exists() ? userSnap.data().credits : 0;
 
     loadJobs();
   });
@@ -106,10 +115,6 @@
   async function loadJobs() {
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
-
-    const userCredits = parseInt(
-      document.getElementById("credits").innerText || "0"
-    );
 
     const snapshot = await getDocs(collection(db, "jobs"));
 
@@ -119,63 +124,69 @@
 
       const unlocked = job.workersUnlocked || 0;
       const status = unlocked >= 3 ? "🟡 Pending" : "🟢 Available";
-
-      let actionButton = "";
-
-      if (unlocked < 3) {
-        if (userCredits > 0) {
-          actionButton = `
-            <button onclick="unlockJob('${jobId}', this)">
-              Unlock job (1 credit)
-            </button>
-          `;
-        } else {
-          actionButton = `
-            <button class="buy-btn" onclick="location.href='buy-credits.html'">
-              Buy credits to unlock
-            </button>
-          `;
-        }
-      }
+      const cost = job.creditCost || 1;
 
       const div = document.createElement("div");
       div.className = "job";
+
       div.innerHTML = `
         <h3>${job.title}</h3>
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
+
+        <div>
+          <span class="badge" style="background:#e8f5e9;">✅ Email verified</span>
+          <span class="badge" style="background:#e3f2fd;">🔐 Google account</span>
+        </div>
+
+        <p style="margin-top:10px;"><strong>Job cost:</strong> ${cost} credits</p>
         <p>Status: ${status}</p>
-        ${actionButton}
+
+        ${
+          unlocked < 3
+            ? `<button onclick="unlockJob('${jobId}', ${cost}, this)">
+                 Unlock job (${cost} credits)
+               </button>`
+            : ""
+        }
       `;
 
       jobsDiv.appendChild(div);
     });
   }
 
-  window.unlockJob = async function (jobId, btn) {
-    const credits = parseInt(
-      document.getElementById("credits").innerText || "0"
-    );
+  window.unlockJob = async function (jobId, cost, btn) {
+    btn.disabled = true;
+    btn.innerText = "Checking credits…";
 
-    if (credits < 1) {
+    const displayedCredits =
+      parseInt(document.getElementById("credits").innerText || "0");
+
+    if (displayedCredits < cost) {
       window.location.href = "buy-credits.html";
       return;
     }
 
-    btn.disabled = true;
-    btn.innerText = "Processing…";
-
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
 
-    await updateDoc(userRef, { credits: increment(-1) });
+    const jobSnap = await getDoc(jobRef);
+    const unlocked = jobSnap.data().workersUnlocked || 0;
+
+    if (unlocked >= 3) {
+      alert("This job is no longer available.");
+      loadJobs();
+      return;
+    }
+
+    await updateDoc(userRef, { credits: increment(-cost) });
     await updateDoc(jobRef, { workersUnlocked: increment(1) });
 
     const updatedUser = await getDoc(userRef);
     document.getElementById("credits").innerText =
       updatedUser.data().credits;
 
-    alert("✅ Job unlocked");
+    alert("Job unlocked. Owner contact revealed.");
     loadJobs();
   };
 
