@@ -51,6 +51,21 @@
       margin-top: 10px;
       font-size: 14px;
     }
+    .refund {
+      background:#f9f9f9;
+      padding:12px;
+      border-radius:8px;
+      margin-top:12px;
+      font-size:14px;
+    }
+    .badges span {
+      font-size:14px;
+      padding:4px 8px;
+      border-radius:6px;
+      margin-right:6px;
+      display:inline-block;
+      margin-top:6px;
+    }
   </style>
 </head>
 
@@ -128,10 +143,8 @@
       const job = jobDoc.data();
       const jobId = jobDoc.id;
 
-      const unlockedCount = job.workersUnlocked || 0;
       const creditCost = job.creditCost || 1;
-      const status = unlockedCount >= 3 ? "🟡 Pending" : "🟢 Available";
-
+      const unlockedCount = job.workersUnlocked || 0;
       const hasUnlocked =
         job.unlockedBy && job.unlockedBy.includes(currentUser.uid);
 
@@ -143,7 +156,12 @@
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
         <p><strong>Cost:</strong> ${creditCost} credits</p>
-        <p>Status: ${status}</p>
+
+        <div class="badges">
+          <span style="background:#e8f5e9;">✅ Email verified</span>
+          <span style="background:#e3f2fd;">🔐 Secure payments</span>
+          <span style="background:#fff3cd;">🛡 Admin approved job</span>
+        </div>
 
         ${
           hasUnlocked
@@ -164,6 +182,17 @@
                   : ""
               }`
         }
+
+        <div class="refund">
+          <strong>Refund policy</strong>
+          <ul>
+            <li>Credits are charged only when you unlock a job.</li>
+            <li>If the job owner provides invalid contact details, credits will be refunded.</li>
+            <li>If the job is already taken before contact, credits will be refunded.</li>
+            <li>No refunds after contact details are revealed.</li>
+            <li>Refund requests must be made within 48 hours.</li>
+          </ul>
+        </div>
       `;
 
       jobsDiv.appendChild(div);
@@ -174,10 +203,10 @@
     btn.disabled = true;
     btn.innerText = "Processing…";
 
-    const displayedCredits =
+    const credits =
       parseInt(document.getElementById("credits").innerText || "0");
 
-    if (displayedCredits < cost) {
+    if (credits < cost) {
       window.location.href = "buy-credits.html";
       return;
     }
@@ -185,10 +214,13 @@
     const userRef = doc(db, "users", currentUser.uid);
     const jobRef = doc(db, "jobs", jobId);
 
+    const jobSnap = await getDoc(jobRef);
+    const unlockedBy = jobSnap.data().unlockedBy || [];
+
     await updateDoc(userRef, { credits: increment(-cost) });
     await updateDoc(jobRef, {
       workersUnlocked: increment(1),
-      unlockedBy: [...(await (await getDoc(jobRef)).data().unlockedBy || []), currentUser.uid]
+      unlockedBy: [...unlockedBy, currentUser.uid]
     });
 
     const updatedUser = await getDoc(userRef);
