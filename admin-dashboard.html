@@ -2,39 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard – LocalJobsUK</title>
+  <title>Admin – Job Approval | LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 1000px;
+      max-width: 900px;
       margin: auto;
       padding: 20px;
-      background: #fafafa;
-    }
-    h2 {
-      margin-bottom: 10px;
     }
     .job {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      border: 1px solid #ccc;
       padding: 15px;
       margin-bottom: 15px;
+      border-radius: 8px;
     }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
+    .admin {
+      background: #f3f3f3;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 8px;
     }
     input {
       padding: 6px;
-      width: 120px;
-      margin-top: 5px;
+      width: 70px;
+      margin-right: 10px;
     }
     button {
-      margin-top: 12px;
       padding: 8px 14px;
       border: none;
       border-radius: 6px;
@@ -43,22 +38,27 @@
       color: white;
       font-weight: bold;
     }
-    .logout {
+    button.reject {
       background: #b71c1c;
-      float: right;
     }
   </style>
 </head>
 
 <body>
 
-<button class="logout" onclick="logout()">Logout</button>
 <h2>Admin – Job Approval</h2>
-<p>Approve jobs and set credit cost</p>
+
+<div class="admin">
+  You are logged in as <strong>ADMIN</strong>
+  &nbsp; | &nbsp;
+  <button onclick="logout()" class="reject">Logout</button>
+</div>
 
 <div id="jobs">
   <p>Loading pending jobs…</p>
 </div>
+
+<a href="index.html">← Back to home</a>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -69,7 +69,8 @@
     where,
     getDocs,
     doc,
-    updateDoc
+    updateDoc,
+    deleteDoc
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
     getAuth,
@@ -91,18 +92,11 @@
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    const token = await user.getIdTokenResult();
-    if (!token.claims.admin) {
+    if (!user || !user.admin) {
       alert("Access denied");
       window.location.href = "index.html";
       return;
     }
-
     loadPendingJobs();
   });
 
@@ -118,7 +112,7 @@
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      jobsDiv.innerHTML = "<p>No pending jobs 🎉</p>";
+      jobsDiv.innerHTML = "<p>No pending jobs.</p>";
       return;
     }
 
@@ -134,12 +128,19 @@
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
 
-        <label>Credit cost</label>
-        <input type="number" min="1" max="20" value="1" id="cost-${jobId}">
+        <label>
+          Credit cost (1–20):
+          <input type="number" min="1" max="20" value="1" id="cost-${jobId}">
+        </label>
 
-        <br>
+        <br><br>
+
         <button onclick="approveJob('${jobId}')">
           Approve Job
+        </button>
+
+        <button class="reject" onclick="rejectJob('${jobId}')">
+          Reject
         </button>
       `;
 
@@ -149,18 +150,26 @@
 
   window.approveJob = async function (jobId) {
     const costInput = document.getElementById(`cost-${jobId}`);
-    const creditCost = parseInt(costInput.value);
+    const cost = parseInt(costInput.value);
 
-    if (!creditCost || creditCost < 1) {
-      alert("Invalid credit cost");
+    if (cost < 1 || cost > 20) {
+      alert("Credit cost must be between 1 and 20");
       return;
     }
 
     await updateDoc(doc(db, "jobs", jobId), {
       approved: true,
-      creditCost: creditCost
+      creditCost: cost,
+      workersUnlocked: 0,
+      unlockedBy: []
     });
 
+    loadPendingJobs();
+  };
+
+  window.rejectJob = async function (jobId) {
+    if (!confirm("Reject and delete this job?")) return;
+    await deleteDoc(doc(db, "jobs", jobId));
     loadPendingJobs();
   };
 
