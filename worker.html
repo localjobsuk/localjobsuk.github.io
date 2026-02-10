@@ -28,7 +28,7 @@
       font-weight: bold;
     }
     button:disabled {
-      background: #888;
+      background: #aaa;
       cursor: not-allowed;
     }
     .credits {
@@ -36,35 +36,6 @@
       padding: 10px;
       margin-bottom: 20px;
       border-radius: 8px;
-    }
-    .locked {
-      background: #fff3cd;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .contact {
-      background: #e8f5e9;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .refund {
-      background:#f9f9f9;
-      padding:12px;
-      border-radius:8px;
-      margin-top:12px;
-      font-size:14px;
-    }
-    .badges span {
-      font-size:14px;
-      padding:4px 8px;
-      border-radius:6px;
-      margin-right:6px;
-      display:inline-block;
-      margin-top:6px;
     }
   </style>
 </head>
@@ -143,70 +114,48 @@
       const job = jobDoc.data();
       const jobId = jobDoc.id;
 
+      const unlockCount = job.unlockCount || 0;
       const creditCost = job.creditCost || 1;
-      const unlockedCount = job.workersUnlocked || 0;
-      const hasUnlocked =
-        job.unlockedBy && job.unlockedBy.includes(currentUser.uid);
 
       const div = document.createElement("div");
       div.className = "job";
+
+      let buttonHtml = "";
+
+      if (unlockCount >= 3) {
+        buttonHtml = `
+          <button disabled style="background:#aaa;">
+            🚫 Job unavailable
+          </button>
+        `;
+      } else {
+        buttonHtml = `
+          <button onclick="unlockJob('${jobId}', ${creditCost}, this)">
+            Unlock job (${creditCost} credits)
+          </button>
+        `;
+      }
 
       div.innerHTML = `
         <h3>${job.title}</h3>
         <p><strong>Location:</strong> ${job.location}</p>
         <p>${job.description}</p>
-        <p><strong>Cost:</strong> ${creditCost} credits</p>
-
-        <div class="badges">
-          <span style="background:#e8f5e9;">✅ Email verified</span>
-          <span style="background:#e3f2fd;">🔐 Secure payments</span>
-          <span style="background:#fff3cd;">🛡 Admin approved job</span>
-        </div>
-
-        ${
-          hasUnlocked
-            ? `<div class="contact">
-                <strong>Contact details</strong><br>
-                Name: ${job.ownerName || "N/A"}<br>
-                Phone: ${job.ownerPhone || "N/A"}<br>
-                Email: ${job.ownerEmail || "N/A"}
-              </div>`
-            : `<div class="locked">
-                🔒 Unlock this job to view contact details
-              </div>
-              ${
-                unlockedCount < 3
-                  ? `<button onclick="unlockJob('${jobId}', ${creditCost}, this)">
-                       Unlock for ${creditCost} credits
-                     </button>`
-                  : ""
-              }`
-        }
-
-        <div class="refund">
-          <strong>Refund policy</strong>
-          <ul>
-            <li>Credits are charged only when you unlock a job.</li>
-            <li>If the job owner provides invalid contact details, credits will be refunded.</li>
-            <li>If the job is already taken before contact, credits will be refunded.</li>
-            <li>No refunds after contact details are revealed.</li>
-            <li>Refund requests must be made within 48 hours.</li>
-          </ul>
-        </div>
+        ${buttonHtml}
       `;
 
       jobsDiv.appendChild(div);
     });
   }
 
-  window.unlockJob = async function (jobId, cost, btn) {
+  // 🔒 CAPPED & INVISIBLE UNLOCK (MAX 3)
+  window.unlockJob = async function (jobId, creditCost, btn) {
     btn.disabled = true;
-    btn.innerText = "Processing…";
+    btn.innerText = "Checking…";
 
-    const credits =
+    const displayedCredits =
       parseInt(document.getElementById("credits").innerText || "0");
 
-    if (credits < cost) {
+    if (displayedCredits < creditCost) {
       window.location.href = "buy-credits.html";
       return;
     }
@@ -215,19 +164,29 @@
     const jobRef = doc(db, "jobs", jobId);
 
     const jobSnap = await getDoc(jobRef);
-    const unlockedBy = jobSnap.data().unlockedBy || [];
+    const unlockCount = jobSnap.data().unlockCount || 0;
 
-    await updateDoc(userRef, { credits: increment(-cost) });
+    // 🚫 LAST-MOMENT SAFETY CHECK
+    if (unlockCount >= 3) {
+      btn.innerText = "🚫 Job unavailable";
+      btn.style.background = "#aaa";
+      return;
+    }
+
+    await updateDoc(userRef, {
+      credits: increment(-creditCost)
+    });
+
     await updateDoc(jobRef, {
-      workersUnlocked: increment(1),
-      unlockedBy: [...unlockedBy, currentUser.uid]
+      unlockCount: increment(1)
     });
 
     const updatedUser = await getDoc(userRef);
     document.getElementById("credits").innerText =
       updatedUser.data().credits;
 
-    loadJobs();
+    btn.innerText = "✅ Job unlocked";
+    btn.style.background = "#2e7d32";
   };
 
   window.logout = async function () {
