@@ -2,198 +2,147 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Jobs | LocalJobsUK</title>
+  <title>My Jobs – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 1000px;
+      max-width: 900px;
       margin: auto;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    .job {
-      background: white;
       padding: 20px;
+    }
+    .job {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 15px;
       border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-
-    .job-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
     .status {
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      color: white;
+      font-weight: bold;
     }
-
-    .open { background: #0a7cff; }
-    .pending { background: #ff9800; }
-    .filled { background: #4caf50; }
-
-    .workers {
-      margin-top: 15px;
+    .pending {
+      color: #f57c00;
     }
-
-    .worker {
-      padding: 8px;
-      background: #f1f1f1;
-      border-radius: 5px;
-      margin-bottom: 6px;
-      font-size: 14px;
+    .approved {
+      color: #2e7d32;
     }
-
     button {
-      margin-top: 15px;
-      padding: 10px 15px;
+      padding: 8px 14px;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
-      background: #0a7cff;
+      background: #b71c1c;
       color: white;
-    }
-
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-
-    .top-actions {
-      margin-bottom: 20px;
+      font-weight: bold;
+      margin-top: 10px;
     }
   </style>
 </head>
+
 <body>
 
-<div class="container">
-  <div class="top-actions">
-    <button onclick="goHome()">Home</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+<h2>My Posted Jobs</h2>
 
-  <h1>My Posted Jobs</h1>
-
-  <div id="jobsContainer">Loading jobs...</div>
+<div id="jobs">
+  <p>Loading your jobs…</p>
 </div>
 
-<script>
-  // 🔧 YOUR FIREBASE CONFIG
+<a href="index.html">← Back to home</a>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    query,
+    where,
+    getDocs,
+    doc,
+    deleteDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import {
+    getAuth,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
+    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+    authDomain: "localjobsuk-fcaba.firebaseapp.com",
+    projectId: "localjobsuk-fcaba",
+    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+    messagingSenderId: "340038751338",
+    appId: "1:340038751338:web:05cca93a73a61de10d2613"
   };
 
-  firebase.initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  let currentUser;
-
-  auth.onAuthStateChanged(async (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (!user) {
       window.location.href = "login.html";
       return;
     }
-
-    currentUser = user;
-    loadJobs();
+    loadMyJobs(user.uid);
   });
 
-  async function loadJobs() {
-    const container = document.getElementById("jobsContainer");
-    container.innerHTML = "";
+  async function loadMyJobs(uid) {
+    const jobsDiv = document.getElementById("jobs");
+    jobsDiv.innerHTML = "";
 
-    const snapshot = await db
-      .collection("jobs")
-      .where("ownerId", "==", currentUser.uid)
-      .orderBy("createdAt", "desc")
-      .get();
+    const q = query(
+      collection(db, "jobs"),
+      where("ownerId", "==", uid)
+    );
+
+    const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      container.innerHTML = "<p>You have not posted any jobs yet.</p>";
+      jobsDiv.innerHTML = "<p>You have not posted any jobs yet.</p>";
       return;
     }
 
-    snapshot.forEach(doc => {
-      const job = doc.data();
-      const jobDiv = document.createElement("div");
-      jobDiv.className = "job";
+    snapshot.forEach((jobDoc) => {
+      const job = jobDoc.data();
+      const jobId = jobDoc.id;
 
-      const statusClass = job.status || "open";
+      const status = job.approved ? "Approved" : "Pending approval";
+      const statusClass = job.approved ? "approved" : "pending";
+      const unlocked = job.workersUnlocked || 0;
 
-      jobDiv.innerHTML = `
-        <div class="job-header">
-          <div>
-            <h3>${job.title || "Untitled Job"}</h3>
-            <p>${job.description || ""}</p>
-          </div>
-          <div class="status ${statusClass}">
-            ${(job.status || "open").toUpperCase()}
-          </div>
-        </div>
+      const div = document.createElement("div");
+      div.className = "job";
 
-        <div class="workers">
-          <strong>Unlocked by:</strong>
-          ${
-            job.unlockedBy && job.unlockedBy.length > 0
-              ? job.unlockedBy.map(w =>
-                  `<div class="worker">${typeof w === "string" ? w : w.email || "Worker"}</div>`
-                ).join("")
-              : "<p>No workers yet</p>"
-          }
-        </div>
+      div.innerHTML = `
+        <h3>${job.title}</h3>
+        <p><strong>Location:</strong> ${job.location}</p>
+        <p class="status ${statusClass}">Status: ${status}</p>
+        <p><strong>Credit cost:</strong> ${job.creditCost || "Not set yet"}</p>
+        <p><strong>Workers unlocked:</strong> ${unlocked}</p>
 
-        <button onclick="markFilled('${doc.id}')" ${job.status === "filled" ? "disabled" : ""}>
-          Mark as Filled
+        ${
+          job.unlockedBy && job.unlockedBy.length > 0
+            ? `<p><strong>Interested workers:</strong><br>
+                ${job.unlockedBy.map(id => `• ${id}`).join("<br>")}
+              </p>`
+            : ""
+        }
+
+        <button onclick="deleteJob('${jobId}')">
+          Delete job
         </button>
       `;
 
-      container.appendChild(jobDiv);
+      jobsDiv.appendChild(div);
     });
   }
 
-  async function markFilled(jobId) {
-    if (!confirm("Mark this job as filled?")) return;
-
-    await db.collection("jobs").doc(jobId).update({
-      status: "filled"
-    });
-
-    loadJobs();
-  }
-
-  function logout() {
-    auth.signOut().then(() => {
-      window.location.href = "index.html";
-    });
-  }
-
-  function goHome() {
-    window.location.href = "index.html";
-  }
+  window.deleteJob = async function (jobId) {
+    if (!confirm("Are you sure you want to delete this job?")) return;
+    await deleteDoc(doc(db, "jobs", jobId));
+    location.reload();
+  };
 </script>
 
 </body>
