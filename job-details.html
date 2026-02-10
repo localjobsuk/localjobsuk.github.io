@@ -8,35 +8,31 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
+      max-width: 800px;
       margin: auto;
       padding: 20px;
     }
     .box {
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      border: 1px solid #ccc;
       padding: 15px;
+      border-radius: 8px;
       margin-bottom: 15px;
     }
     .locked {
-      filter: blur(6px);
-      user-select: none;
-      pointer-events: none;
+      background: #f5f5f5;
+      color: #777;
+      text-align: center;
+      padding: 15px;
+      border-radius: 8px;
     }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
+    .unlock {
       background: #203a43;
       color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .credits {
-      background: #f1f1f1;
       padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 15px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -45,26 +41,21 @@
 
 <h2 id="title">Loading…</h2>
 
-<div class="credits">
-  Your credits: <strong><span id="credits">0</span></strong>
+<div class="box">
+  <p><strong>Location:</strong> <span id="location"></span></p>
+  <p id="description"></p>
 </div>
 
 <div class="box">
-  <strong>Location:</strong>
-  <span id="location"></span>
+  <h3>Photos</h3>
+  <div id="photos">No photos uploaded</div>
 </div>
 
-<div class="box locked" id="lockedContent">
-  <h3>Job Details</h3>
-  <p id="description"></p>
-  <p><strong>Contact:</strong> <span id="contact"></span></p>
-</div>
-
-<div class="box" id="unlockBox">
-  <p>
-    🔒 This job costs <strong><span id="cost">0</span> credits</strong> to unlock
-  </p>
-  <button onclick="unlockJob()">Unlock Job</button>
+<div class="box" id="contactBox">
+  <div class="locked">
+    🔒 Contact details locked<br><br>
+    Unlock this job to contact the owner
+  </div>
 </div>
 
 <br>
@@ -75,9 +66,7 @@
   import {
     getFirestore,
     doc,
-    getDoc,
-    updateDoc,
-    increment
+    getDoc
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
     getAuth,
@@ -97,11 +86,7 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-  const params = new URLSearchParams(window.location.search);
-  const jobId = params.get("id");
-
-  let currentUser;
-  let jobCost = 0;
+  const jobId = new URLSearchParams(window.location.search).get("id");
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -109,49 +94,34 @@
       return;
     }
 
-    currentUser = user;
-
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    document.getElementById("credits").innerText =
-      userSnap.exists() ? userSnap.data().credits : 0;
-
-    loadJob();
-  });
-
-  async function loadJob() {
-    const jobSnap = await getDoc(doc(db, "jobs", jobId));
-    if (!jobSnap.exists()) {
-      alert("Job not found");
-      return;
-    }
-
+    const jobRef = doc(db, "jobs", jobId);
+    const jobSnap = await getDoc(jobRef);
     const job = jobSnap.data();
-    jobCost = job.creditCost || 1;
 
     document.getElementById("title").innerText = job.title;
     document.getElementById("location").innerText = job.location;
     document.getElementById("description").innerText = job.description;
-    document.getElementById("contact").innerText = job.contact || "Provided after unlock";
-    document.getElementById("cost").innerText = jobCost;
-  }
 
-  window.unlockJob = async function () {
-    const creditEl = document.getElementById("credits");
-    const credits = parseInt(creditEl.innerText);
-
-    if (credits < jobCost) {
-      window.location.href = "buy-credits.html";
-      return;
+    // 📸 PHOTOS (VISIBLE TO ALL)
+    if (job.photos && job.photos.length > 0) {
+      document.getElementById("photos").innerHTML =
+        job.photos.map(url => `<img src="${url}" style="max-width:100%;margin-bottom:10px;">`).join("");
     }
 
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      credits: increment(-jobCost)
-    });
+    // 🔐 CHECK IF USER UNLOCKED
+    const unlockedUsers = job.unlockedUsers || [];
 
-    document.getElementById("lockedContent").classList.remove("locked");
-    document.getElementById("unlockBox").style.display = "none";
-    creditEl.innerText = credits - jobCost;
-  };
+    if (unlockedUsers.includes(user.uid)) {
+      document.getElementById("contactBox").innerHTML = `
+        <div class="box">
+          <h3>Contact details</h3>
+          <p><strong>Name:</strong> ${job.ownerName}</p>
+          <p><strong>Email:</strong> ${job.ownerEmail}</p>
+          <p><strong>Phone:</strong> ${job.ownerPhone}</p>
+        </div>
+      `;
+    }
+  });
 </script>
 
 </body>
