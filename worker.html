@@ -37,6 +37,10 @@
       margin-bottom: 20px;
       border-radius: 8px;
     }
+    .view {
+      margin-left: 10px;
+      background: #455a64;
+    }
   </style>
 </head>
 
@@ -66,7 +70,8 @@
     doc,
     getDoc,
     updateDoc,
-    increment
+    increment,
+    arrayUnion
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import {
     getAuth,
@@ -116,19 +121,31 @@
 
       const unlockCount = job.unlockCount || 0;
       const creditCost = job.creditCost || 1;
+      const unlockedUsers = job.unlockedUsers || [];
 
       const div = document.createElement("div");
       div.className = "job";
 
       let buttonHtml = "";
 
-      if (unlockCount >= 3) {
+      // 🔓 Already unlocked by this user
+      if (unlockedUsers.includes(currentUser.uid)) {
         buttonHtml = `
-          <button disabled style="background:#aaa;">
+          <button class="view" onclick="viewJob('${jobId}')">
+            View job details
+          </button>
+        `;
+      }
+      // 🚫 Max reached
+      else if (unlockCount >= 3) {
+        buttonHtml = `
+          <button disabled>
             🚫 Job unavailable
           </button>
         `;
-      } else {
+      }
+      // ✅ Can unlock
+      else {
         buttonHtml = `
           <button onclick="unlockJob('${jobId}', ${creditCost}, this)">
             Unlock job (${creditCost} credits)
@@ -147,7 +164,7 @@
     });
   }
 
-  // 🔒 CAPPED & INVISIBLE UNLOCK (MAX 3)
+  // 🔒 SAFE UNLOCK (MAX 3 + UNIQUE USER)
   window.unlockJob = async function (jobId, creditCost, btn) {
     btn.disabled = true;
     btn.innerText = "Checking…";
@@ -164,10 +181,14 @@
     const jobRef = doc(db, "jobs", jobId);
 
     const jobSnap = await getDoc(jobRef);
-    const unlockCount = jobSnap.data().unlockCount || 0;
+    const job = jobSnap.data();
 
-    // 🚫 LAST-MOMENT SAFETY CHECK
-    if (unlockCount >= 3) {
+    if ((job.unlockedUsers || []).includes(currentUser.uid)) {
+      window.location.href = `job-details.html?id=${jobId}`;
+      return;
+    }
+
+    if ((job.unlockCount || 0) >= 3) {
       btn.innerText = "🚫 Job unavailable";
       btn.style.background = "#aaa";
       return;
@@ -178,15 +199,17 @@
     });
 
     await updateDoc(jobRef, {
-      unlockCount: increment(1)
+      unlockCount: increment(1),
+      unlockedUsers: arrayUnion(currentUser.uid)
     });
 
-    const updatedUser = await getDoc(userRef);
-    document.getElementById("credits").innerText =
-      updatedUser.data().credits;
+    btn.innerText = "View job details";
+    btn.style.background = "#455a64";
+    btn.onclick = () => viewJob(jobId);
+  };
 
-    btn.innerText = "✅ Job unlocked";
-    btn.style.background = "#2e7d32";
+  window.viewJob = function (jobId) {
+    window.location.href = `job-details.html?id=${jobId}`;
   };
 
   window.logout = async function () {
