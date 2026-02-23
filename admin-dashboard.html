@@ -16,6 +16,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let currentUser = null;
+let jobsData = []; // store jobs for filtering
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) window.location.href = "login.html";
@@ -27,39 +28,67 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "index.html";
   }
 
-  loadAllJobs();
+  await loadAllJobs();
 });
 
+// Load all jobs from Firestore
 async function loadAllJobs() {
-  const jobsCol = collection(db, "jobs");
-  const snapshot = await getDocs(jobsCol);
+  const snapshot = await getDocs(collection(db, "jobs"));
+  jobsData = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+  renderJobs();
+}
+
+// Render jobs with optional category filter
+function renderJobs() {
+  const selectedCategory = document.getElementById("categoryFilter").value;
   const container = document.getElementById("allJobs");
   container.innerHTML = "";
 
-  snapshot.forEach(docSnap => {
-    const job = docSnap.data();
-    const div = document.createElement("div");
-    div.className = "job";
+  jobsData.filter(job => !selectedCategory || job.category === selectedCategory)
+    .forEach(job => {
+      const div = document.createElement("div");
+      div.className = "job";
 
-    div.innerHTML = `
-      <h3>${job.title} <span class="category-badge">${job.category || "Uncategorized"}</span></h3>
-      <p>${job.description}</p>
-      <p>📍 ${job.location || "N/A"} • 💰 Credits: ${job.creditCost || 0} • 🕒 Posted: ${job.createdAt?.toDate().toLocaleString() || "N/A"}</p>
-      <p>Owner ID: ${job.ownerId}</p>
-      <p>Status: ${job.approved ? "Approved ✅" : "Pending ⚠️"}</p>
-      <hr>
-    `;
-    container.appendChild(div);
-  });
+      div.innerHTML = `
+        <h3>${job.title} <span class="category-badge">${job.category || "Uncategorized"}</span></h3>
+        <p>${job.description}</p>
+        <p>📍 ${job.location || "N/A"} • 💰 Credits: ${job.creditCost || 0} • 🕒 Posted: ${job.createdAt?.toDate().toLocaleString() || "N/A"}</p>
+        <p>Owner ID: ${job.ownerId}</p>
+        <p>Status: ${job.approved ? "Approved ✅" : "Pending ⚠️"}</p>
+        <hr>
+      `;
+      container.appendChild(div);
+    });
 }
+
+// Filter change event
+document.addEventListener("DOMContentLoaded", () => {
+  const filterEl = document.getElementById("categoryFilter");
+  filterEl.addEventListener("change", renderJobs);
+});
+
 </script>
 <style>
 .job { border:1px solid #ccc; padding:15px; margin-bottom:20px; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
 .category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; margin-left:6px; }
+#categoryFilter { padding:6px 10px; margin:10px 0; border-radius:4px; border:1px solid #ccc; }
 </style>
 </head>
 <body>
+
 <h2>Admin Dashboard — All Jobs</h2>
+
+<label for="categoryFilter">Filter by Category:</label>
+<select id="categoryFilter">
+  <option value="">All Categories</option>
+  <option value="Gardening">Gardening</option>
+  <option value="Cleaning">Cleaning</option>
+  <option value="Delivery">Delivery</option>
+  <option value="IT">IT</option>
+  <option value="Other">Other</option>
+</select>
+
 <div id="allJobs"></div>
+
 </body>
 </html>
