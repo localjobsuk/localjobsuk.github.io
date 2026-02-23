@@ -124,3 +124,28 @@ button:hover {
   text-align: center;
   margin-top: 30px;
 }
+.form-box {
+  max-width: 600px;
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-box input,
+.form-box textarea {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.new-badge {
+  color: red;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.refund-note {
+  display: block;
+  margin-top: 10px;
+  color: green;
+  font-size: 12px;
+}
