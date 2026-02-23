@@ -1,141 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
-
-<meta name="description" content="Find verified local jobs posted by property owners and agencies. Unlock jobs instantly with credits. No commission. No middleman.">
-
-<meta name="keywords" content="local jobs UK, trades jobs UK, handyman jobs, plumbing jobs UK, property maintenance jobs, grass cutting jobs UK">
-
-<meta name="author" content="LocalJobsUK">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Open Graph (for social sharing) -->
-<meta property="og:title" content="LocalJobsUK | Verified Trade Jobs">
-<meta property="og:description" content="Browse approved local jobs. Unlock contact details instantly.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://yourdomain.co.uk">
+<head>
 <meta charset="UTF-8">
-<title>Available Jobs - LocalJobsUK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Available Jobs | LocalJobsUK</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+// 🔹 Your Firebase config here
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const functions = getFunctions(app);
 
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+// 🔹 Cloud Function
+const unlockJobFn = httpsCallable(functions, "unlockJob");
 
-<div id="navbar-container"></div>
+// DOM Elements
+const jobsContainer = document.getElementById("jobsContainer");
+const creditsDisplay = document.getElementById("credits");
 
-<h2>Available Jobs</h2>
+let currentUser = null;
 
-<div class="info-box">
-  <strong>Browse jobs below.</strong><br>
-  Unlock to see contact details. Limited availability per job.
-</div>
-
-<div id="jobs-container"></div>
-
-<script>
-fetch("navbar.html")
-  .then(res => res.text())
-  .then(data => document.getElementById("navbar-container").innerHTML = data)
-  .then(() => { 
-      const script = document.createElement("script");
-      script.src = "navbar.js";
-      document.body.appendChild(script);
-  });
-
-const db = firebase.firestore();
-
-function timeAgo(timestamp) {
-  if (!timestamp) return "Just now";
-  const now = new Date();
-  const seconds = Math.floor((now - timestamp.toDate()) / 1000);
-  const hours = Math.floor(seconds / 3600);
-  const days = Math.floor(hours / 24);
-  if (days > 0) return `${days} day(s) ago`;
-  if (hours > 0) return `${hours} hour(s) ago`;
-  return "Just now";
-}
-
-db.collection("jobs").where("status", "==", "active").get()
-.then(snapshot => {
-  snapshot.forEach(doc => {
-    const job = doc.data();
-    const jobCard = document.createElement("div");
-    jobCard.className = "job-card";
-
-    const isNew = job.createdAt &&
-      (new Date() - job.createdAt.toDate()) < 86400000;
-
-    jobCard.innerHTML = `
-      <h3>
-        ${job.title}
-        ${isNew ? '<span class="new-badge">🔥 NEW</span>' : ''}
-      </h3>
-
-      <p>${job.description}</p>
-
-      <p>📍 ${job.location}</p>
-      <p>🕒 ${timeAgo(job.createdAt)}</p>
-
-      <p class="credit-cost">Unlock for ${job.creditCost || 1} Credits</p>
-
-      <button onclick="unlockJob('${doc.id}', ${job.creditCost || 1})">
-        Unlock Job
-      </button>
-
-      <small class="refund-note">
-        ✔ Automatic refund if no reply within 48h<br>
-        ✔ Credits never expire
-      </small>
-    `;
-
-    document.getElementById("jobs-container").appendChild(jobCard);
-  });
-});
-
-async function unlockJob(jobId, cost) {
-  const user = firebase.auth().currentUser;
+// 🔹 Auth listener
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
+  currentUser = user;
 
-  const unlockRef = db.collection("users")
-    .doc(user.uid)
-    .collection("unlocks")
-    .doc(jobId);
-
-  const unlockDoc = await unlockRef.get();
-  if (unlockDoc.exists) {
-    alert("Already unlocked.");
-    return;
+  // Load user credits
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  if (userSnap.exists()) {
+    creditsDisplay.innerText = userSnap.data().credits || 0;
   }
 
-  const userRef = db.collection("users").doc(user.uid);
-  const userDoc = await userRef.get();
-  const credits = userDoc.data().credits || 0;
+  loadJobs();
+});
 
-  if (credits < cost) {
-    window.location.href = "buy-credits.html";
-    return;
+// 🔹 Load approved jobs
+async function loadJobs() {
+  const jobsCol = collection(db, "jobs");
+  const jobsSnap = await getDocs(jobsCol);
+
+  jobsContainer.innerHTML = "";
+
+  for (const docSnap of jobsSnap.docs) {
+    const job = docSnap.data();
+    const jobId = docSnap.id;
+
+    if (!job.approved) continue;
+
+    // Public fields
+    const title = job.title;
+    const description = job.description;
+    const location = job.location;
+    const images = job.images || [];
+    const creditCost = job.creditCost || 1;
+
+    // Contact preview
+    const phonePreview = job.contactPreview?.phone || "XXXX";
+    const emailPreview = job.contactPreview?.email || "*****@***.com";
+
+    const div = document.createElement("div");
+    div.className = "job";
+    div.innerHTML = `
+      <h3>${title}</h3>
+      <p>${description}</p>
+      <p>📍 ${location}</p>
+      ${images.map(img => `<img src="${img}" class="job-img">`).join("")}
+      <p>💰 Credits to unlock: ${creditCost}</p>
+      <p>📞 Phone: <span class="blurred">${phonePreview}</span></p>
+      <p>📧 Email: <span class="blurred">${emailPreview}</span></p>
+      <button class="unlock-btn">Unlock Job</button>
+      <hr>
+    `;
+    jobsContainer.appendChild(div);
+
+    const unlockBtn = div.querySelector(".unlock-btn");
+    unlockBtn.addEventListener("click", () => handleUnlock(jobId, div, creditCost));
   }
+}
 
-  await userRef.update({ credits: credits - cost });
+// 🔹 Handle unlock via Cloud Function
+async function handleUnlock(jobId, jobDiv, creditCost) {
+  const unlockBtn = jobDiv.querySelector(".unlock-btn");
+  unlockBtn.disabled = true;
+  unlockBtn.innerText = "Processing…";
 
-  await unlockRef.set({
-    jobId,
-    cost,
-    unlockedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    refunded: false
-  });
+  try {
+    const result = await unlockJobFn({ jobId });
+    if (result.data.success) {
+      // Update credits
+      const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+      creditsDisplay.innerText = userSnap.data().credits;
 
-  alert("Job unlocked successfully!");
+      // Fetch private contact info
+      const metaDoc = await getDoc(doc(db, "jobs", jobId, "private", "meta"));
+      if (metaDoc.exists()) {
+        const meta = metaDoc.data();
+        jobDiv.querySelector(".blurred").innerText = meta.fullPhone;
+        jobDiv.querySelector(".blurred").nextElementSibling.innerText = meta.fullEmail;
+      }
+
+      unlockBtn.innerText = "✅ Job Unlocked";
+      unlockBtn.style.backgroundColor = "#2e7d32";
+      unlockBtn.disabled = true;
+    }
+  } catch (err) {
+    alert(err.message);
+    unlockBtn.disabled = false;
+    unlockBtn.innerText = `Unlock Job (${creditCost} credits)`;
+  }
 }
 </script>
-
+<style>
+.job { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+.job-img { width: 100px; height: 100px; object-fit: cover; margin-right: 5px; }
+.unlock-btn { background-color: #455a64; color: #fff; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+.unlock-btn:disabled { background-color: #aaa; cursor: not-allowed; }
+.blurred { filter: blur(4px); }
+</style>
+</head>
+<body>
+<h2>Available Jobs</h2>
+<p>Your credits: <span id="credits">0</span></p>
+<div id="jobsContainer"></div>
 </body>
 </html>
