@@ -5,124 +5,130 @@
   <title>Job Details – LocalJobsUK</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- Premium CSS -->
+  <link rel="stylesheet" href="style.css">
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
-    }
-    .box {
-      border: 1px solid #ccc;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-    }
-    .locked {
-      background: #f5f5f5;
-      color: #777;
-      text-align: center;
-      padding: 15px;
-      border-radius: 8px;
-    }
-    .unlock {
-      background: #203a43;
-      color: white;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:0; }
+    h2 { text-align:center; margin-top:20px; }
+    .job-card { background:#fff; padding:20px; margin:20px auto; max-width:900px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.1); }
+    .job-card:hover { box-shadow:0 6px 12px rgba(0,0,0,0.15); transition:0.3s; }
+    .job-images img { max-width:100%; margin:5px 0; border-radius:5px; }
+    .category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; }
+    .blurred { filter: blur(5px); transition:filter 0.4s; display:inline-block; }
+    .blurred.revealed { filter: blur(0); }
+    .info-box { background:#eef3f7; padding:10px 15px; border-radius:5px; margin-top:10px; font-size:14px; color:#333; }
+    .unlock-btn { padding:10px 20px; background:#0a7cff; color:#fff; border:none; border-radius:5px; cursor:pointer; margin-top:10px; }
+    .unlock-btn:hover { background:#065ecf; }
+    a.back-link { display:block; text-align:center; margin:20px; color:#0a7cff; text-decoration:none; }
   </style>
 </head>
 
 <body>
 
-<h2 id="title">Loading…</h2>
+  <!-- Navbar -->
+  <div id="navbar"></div>
+  <script type="module">
+    import './navbar.js';
+    document.getElementById('navbar').innerHTML = await fetch('navbar.html').then(r=>r.text());
+  </script>
 
-<div class="box">
-  <p><strong>Location:</strong> <span id="location"></span></p>
-  <p id="description"></p>
-</div>
+  <h2 id="title">Loading…</h2>
 
-<div class="box">
-  <h3>Photos</h3>
-  <div id="photos">No photos uploaded</div>
-</div>
-
-<div class="box" id="contactBox">
-  <div class="locked">
-    🔒 Contact details locked<br><br>
-    Unlock this job to contact the owner
+  <div class="job-card">
+    <p><strong>Location:</strong> <span id="location"></span></p>
+    <p id="description"></p>
   </div>
-</div>
 
-<br>
-<a href="worker.html">← Back to jobs</a>
+  <div class="job-card">
+    <h3>Photos</h3>
+    <div id="photos">No photos uploaded</div>
+  </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getFirestore,
-    doc,
-    getDoc
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import {
-    getAuth,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  <div class="job-card" id="contactBox">
+    <div class="info-box blurred">
+      🔒 Contact details locked<br>
+      Unlock this job to contact the owner
+    </div>
+    <button class="unlock-btn" id="unlockBtn">Unlock Job</button>
+    <div class="info-box" style="margin-top:10px;">
+      ✔ Automatic refund if no reply within 48h<br>
+      ✔ Refund if job removed<br>
+      ✔ Refund if poster inactive
+    </div>
+  </div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-    authDomain: "localjobsuk-fcaba.firebaseapp.com",
-    projectId: "localjobsuk-fcaba",
-    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-    messagingSenderId: "340038751338",
-    appId: "1:340038751338:web:05cca93a73a61de10d2613"
-  };
+  <a href="worker.html" class="back-link">← Back to jobs</a>
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  const jobId = new URLSearchParams(window.location.search).get("id");
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
+      authDomain: "localjobsuk-fcaba.firebaseapp.com",
+      projectId: "localjobsuk-fcaba",
+      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
+      messagingSenderId: "340038751338",
+      appId: "1:340038751338:web:05cca93a73a61de10d2613"
+    };
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    const jobRef = doc(db, "jobs", jobId);
-    const jobSnap = await getDoc(jobRef);
-    const job = jobSnap.data();
+    const jobId = new URLSearchParams(window.location.search).get("id");
+    const unlockBtn = document.getElementById("unlockBtn");
 
-    document.getElementById("title").innerText = job.title;
-    document.getElementById("location").innerText = job.location;
-    document.getElementById("description").innerText = job.description;
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
 
-    // 📸 PHOTOS (VISIBLE TO ALL)
-    if (job.photos && job.photos.length > 0) {
-      document.getElementById("photos").innerHTML =
-        job.photos.map(url => `<img src="${url}" style="max-width:100%;margin-bottom:10px;">`).join("");
-    }
+      const jobRef = doc(db, "jobs", jobId);
+      const jobSnap = await getDoc(jobRef);
+      const job = jobSnap.data();
 
-    // 🔐 CHECK IF USER UNLOCKED
-    const unlockedUsers = job.unlockedUsers || [];
+      document.getElementById("title").innerText = job.title;
+      document.getElementById("location").innerText = job.location;
+      document.getElementById("description").innerText = job.description;
 
-    if (unlockedUsers.includes(user.uid)) {
-      document.getElementById("contactBox").innerHTML = `
-        <div class="box">
-          <h3>Contact details</h3>
-          <p><strong>Name:</strong> ${job.ownerName}</p>
-          <p><strong>Email:</strong> ${job.ownerEmail}</p>
-          <p><strong>Phone:</strong> ${job.ownerPhone}</p>
+      // Photos
+      if (job.photos && job.photos.length > 0) {
+        document.getElementById("photos").innerHTML = 
+          job.photos.map(url => `<img src="${url}">`).join("");
+      }
+
+      // Check if already unlocked
+      const unlockedUsers = job.unlockedUsers || [];
+      if (unlockedUsers.includes(user.uid)) {
+        revealContact(job);
+      }
+
+      // Unlock button
+      unlockBtn.addEventListener("click", async () => {
+        await updateDoc(jobRef, { unlockedUsers: arrayUnion(user.uid) });
+        revealContact(job);
+        unlockBtn.innerText = "✅ Job Unlocked";
+        unlockBtn.disabled = true;
+        unlockBtn.style.backgroundColor = "#2e7d32";
+      });
+    });
+
+    function revealContact(job) {
+      const contactBox = document.getElementById("contactBox");
+      contactBox.innerHTML = `
+        <h3>Contact details</h3>
+        <p><strong>Name:</strong> ${job.ownerName}</p>
+        <p><strong>Email:</strong> <span class="blurred revealed">${job.ownerEmail}</span></p>
+        <p><strong>Phone:</strong> <span class="blurred revealed">${job.ownerPhone}</span></p>
+        <div class="info-box" style="margin-top:10px;">
+          ✔ Automatic refund if no reply within 48h<br>
+          ✔ Refund if job removed<br>
+          ✔ Refund if poster inactive
         </div>
       `;
     }
-  });
-</script>
+  </script>
 
 </body>
 </html>
