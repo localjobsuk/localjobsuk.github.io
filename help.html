@@ -2,56 +2,68 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Help - LocalJobsUK</title>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help | LocalJobsUK</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.help-section { max-width: 700px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.help-section h2 { margin-top: 0; color: #2c3e50; }
+.help-section ul { list-style-type: disc; margin-left: 20px; }
+.help-section li { margin: 8px 0; }
+.help-note { background: #e7f3fe; padding: 10px; border-left: 4px solid #2196f3; margin-bottom: 15px; border-radius: 4px; }
+</style>
 </head>
 <body>
 
-<div id="navbar-container"></div>
+<!-- Navigation -->
+<nav>
+  <a href="index.html">Home</a>
+  <a href="worker.html">Available Jobs</a>
+  <a href="post-job.html">Post a Job</a>
+  <a href="buy-credits.html">Buy Credits</a>
+  <a href="help.html">Help</a>
+</nav>
 
+<section class="help-section">
 <h2>Help & Support</h2>
 
-<div class="info-box">
-  <h3>💼 How to Start Earning Today</h3>
-  <p>
-    1️⃣ Buy credits<br>
-    2️⃣ Unlock jobs<br>
-    3️⃣ Contact customer directly<br>
-    4️⃣ Get hired<br><br>
-    <strong>No commission. No middleman.</strong>
-  </p>
+<div class="help-note">
+✔ Automatic refunds are applied if:<br>
+• No reply from the poster within 48 hours<br>
+• Job is removed<br>
+• Poster becomes inactive
 </div>
 
-<div class="info-box">
-  <h3>✔ Refund Policy</h3>
-  <p>
-    ✔ Automatic refund if no reply within 48 hours<br>
-    ✔ Refund if job is removed<br>
-    ✔ Refund if poster inactive<br>
-    ✔ Credits never expire
-  </p>
-</div>
+<h3>How LocalJobsUK Works</h3>
+<ol>
+  <li>Job posters submit their jobs for approval.</li>
+  <li>Admin approves jobs and sets the credit cost.</li>
+  <li>Workers buy credits and unlock jobs.</li>
+  <li>Full contact info is revealed once a job is unlocked.</li>
+  <li>Workers contact the job poster directly. No commission.</li>
+</ol>
 
-<div class="info-box">
-  <h3>📩 Contact Us</h3>
-  <p>Email: support@localjobsuk.co.uk</p>
-</div>
+<h3>Tips for Workers</h3>
+<ul>
+  <li>Check the location and description before unlocking.</li>
+  <li>Unlock only jobs you are confident about.</li>
+  <li>Credits are deducted when unlocking jobs.</li>
+  <li>Contact info will remain blurred until the job is unlocked.</li>
+</ul>
 
-<script>
-fetch("navbar.html")
-  .then(res => res.text())
-  .then(data => document.getElementById("navbar-container").innerHTML = data)
-  .then(() => { 
-      const script = document.createElement("script");
-      script.src = "navbar.js";
-      document.body.appendChild(script);
-  });
-</script>
+<h3>Tips for Job Posters</h3>
+<ul>
+  <li>Provide clear job descriptions and images.</li>
+  <li>Keep your contact info accurate for faster responses.</li>
+  <li>Jobs are reviewed by the admin before going live.</li>
+  <li>Set realistic credit cost to attract workers.</li>
+</ul>
+
+<h3>Contact Us</h3>
+<p>If you have questions, please email: <strong>support@localjobsuk.com</strong></p>
+<p>We aim to respond within 24 hours.</p>
+
+</section>
 
 </body>
 </html>
