@@ -11,44 +11,47 @@ import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gsta
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
-// 🔹 Your Firebase config here
+// 🔹 Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const functions = getFunctions(app);
 
-// 🔹 Callable Cloud Function
+// 🔹 Cloud Function
 const unlockJobFn = httpsCallable(functions, "unlockJob");
 
-// DOM Elements
 const jobsContainer = document.getElementById("jobsContainer");
 const creditsDisplay = document.getElementById("credits");
 
 let currentUser = null;
 
-// 🔹 Auth listener
+// Auth listener
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
+  if (!user) window.location.href = "login.html";
   currentUser = user;
 
   // Load user credits
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  if (userSnap.exists()) {
-    creditsDisplay.innerText = userSnap.data().credits || 0;
-  }
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid"));
+  if (userSnap.exists()) creditsDisplay.innerText = userSnap.data().credits || 0;
 
   loadJobs();
 });
 
-// 🔹 Load approved jobs
+// Utility: format posted time
+function timeAgo(timestamp) {
+  if (!timestamp) return "";
+  const diff = (Date.now() - timestamp.toDate().getTime()) / 1000;
+  if (diff < 60) return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+// Load jobs
 async function loadJobs() {
   const jobsCol = collection(db, "jobs");
   const jobsSnap = await getDocs(jobsCol);
-
   jobsContainer.innerHTML = "";
 
   for (const docSnap of jobsSnap.docs) {
@@ -57,37 +60,35 @@ async function loadJobs() {
 
     if (!job.approved) continue;
 
-    const title = job.title;
-    const description = job.description;
-    const location = job.location;
-    const images = job.images || [];
-    const creditCost = job.creditCost || 1;
+    const div = document.createElement("div");
+    div.className = "job";
 
-    // Contact preview
+    const postedTime = timeAgo(job.createdAt);
+    const isNew = (Date.now() - job.createdAt?.toDate().getTime() || 0) < 86400000 ? true : false;
+
     const phonePreview = job.contactPreview?.phone || "XXXX";
     const emailPreview = job.contactPreview?.email || "*****@***.com";
 
-    const div = document.createElement("div");
-    div.className = "job";
     div.innerHTML = `
-      <h3>${title}</h3>
-      <p>${description}</p>
-      <p>📍 ${location}</p>
-      ${images.map(img => `<img src="${img}" class="job-img">`).join("")}
-      <p>💰 Credits to unlock: ${creditCost}</p>
+      <h3>${job.title} ${isNew ? '<span class="new-badge">🔥 New</span>' : ''}</h3>
+      <p>${job.description}</p>
+      <p>📍 ${job.location || "N/A"} • 🕒 ${postedTime} • 👤 Verified Poster</p>
+      ${job.images?.map(img => `<img src="${img}" class="job-img">`).join("") || ''}
+      <p>💰 Credits to unlock: ${job.creditCost}</p>
       <p>📞 Phone: <span class="blurred phone">${phonePreview}</span></p>
       <p>📧 Email: <span class="blurred email">${emailPreview}</span></p>
-      <button class="unlock-btn">Unlock Job (${creditCost} credits)</button>
+      <small>✔ Automatic refund if no reply within 48h / Job removed / Poster inactive</small><br>
+      <button class="unlock-btn">Unlock Job (${job.creditCost} credits)</button>
       <hr>
     `;
     jobsContainer.appendChild(div);
 
     const unlockBtn = div.querySelector(".unlock-btn");
-    unlockBtn.addEventListener("click", () => handleUnlock(jobId, div, creditCost));
+    unlockBtn.addEventListener("click", () => handleUnlock(jobId, div, job.creditCost));
   }
 }
 
-// 🔹 Handle unlock via Cloud Function
+// Unlock job
 async function handleUnlock(jobId, jobDiv, creditCost) {
   const unlockBtn = jobDiv.querySelector(".unlock-btn");
   unlockBtn.disabled = true;
@@ -95,23 +96,19 @@ async function handleUnlock(jobId, jobDiv, creditCost) {
 
   try {
     const result = await unlockJobFn({ jobId });
-
     if (result.data.success) {
       // Update credits
       const userSnap = await getDoc(doc(db, "users", currentUser.uid));
       creditsDisplay.innerText = userSnap.data().credits;
 
-      // Fetch private contact info
+      // Reveal full contact
       const metaDoc = await getDoc(doc(db, "jobs", jobId, "private", "meta"));
       if (metaDoc.exists()) {
         const meta = metaDoc.data();
-
-        // Reveal full phone
         const phoneEl = jobDiv.querySelector(".phone");
         phoneEl.innerText = meta.fullPhone;
         phoneEl.classList.add("revealed");
 
-        // Reveal full email
         const emailEl = jobDiv.querySelector(".email");
         emailEl.innerText = meta.fullEmail;
         emailEl.classList.add("revealed");
@@ -128,10 +125,67 @@ async function handleUnlock(jobId, jobDiv, creditCost) {
   }
 }
 </script>
+<style>
+/* ---------------- Navigation ---------------- */
+nav {
+  background-color: #2c3e50;
+  color: #fff;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  margin: 0 8px;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------- Job Cards & Contact ---------------- */
+.job { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.job h3 { margin-top:0; color:#34495e; }
+.job p { margin:5px 0; line-height:1.4; }
+.job-img { width:120px; height:100px; object-fit:cover; margin-right:5px; border-radius:5px; transition: transform 0.3s ease; cursor:pointer; }
+.job-img:hover { transform: scale(1.05); }
+.unlock-btn { background-color:#455a64; color:#fff; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; font-size:14px; transition: background 0.2s ease, transform 0.1s ease; }
+.unlock-btn:disabled { background-color:#aaa; cursor:not-allowed; }
+.blurred { filter: blur(4px); transition: filter 0.5s ease; }
+.blurred.revealed { filter: blur(0); color: #2c3e50; }
+.new-badge { background:#e74c3c; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; }
+</style>
 </head>
 <body>
+
+<!-- Navigation -->
+<nav>
+  <a href="index.html">Home</a>
+  <a href="worker.html">Available Jobs</a>
+  <a href="post-job.html">Post a Job</a>
+  <a href="buy-credits.html">Buy Credits</a>
+  <a href="help.html">Help</a>
+</nav>
+
 <h2>Available Jobs</h2>
 <p>Your credits: <span id="credits">0</span></p>
 <div id="jobsContainer"></div>
+
+<!-- How to Start Earning Today -->
+<section style="max-width:600px;margin:20px auto;background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+<h3>💼 How to Start Earning Today</h3>
+<ol>
+  <li>Buy credits</li>
+  <li>Unlock jobs</li>
+  <li>Contact customer directly</li>
+  <li>Get hired</li>
+</ol>
+<p>No commission. No middleman.</p>
+</section>
+
 </body>
 </html>
