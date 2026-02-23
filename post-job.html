@@ -1,95 +1,89 @@
-firebase.auth().onAuthStateChanged((user) => {
-  const protectedPages = ["post-job.html", "buy-credits.html"];
-  const currentPage = location.pathname.split("/").pop();
-  if (protectedPages.includes(currentPage) && !user) {
-    window.location.href = "login.html";
-  }
-});
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Post a Job – LocalJobsUK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-const auth = getAuth();
+<meta charset="UTF-8">
+<title>Post a Job - LocalJobsUK</title>
 
-onAuthStateChanged(auth, (user) => {
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="navbar-container"></div>
+
+<h2>Post a Job</h2>
+
+<div class="info-box">
+  <strong>Post Your Job</strong>
+  <p>
+    Describe your job clearly. Workers will see photos and details before unlocking.
+  </p>
+</div>
+
+<div style="max-width:600px;margin:20px auto;">
+  <input type="text" id="title" placeholder="Job Title" style="width:100%;padding:10px;margin-bottom:10px;">
+  
+  <textarea id="description" placeholder="Job Description" 
+    style="width:100%;padding:10px;margin-bottom:10px;"></textarea>
+  
+  <input type="text" id="location" placeholder="Location (e.g. London)" 
+    style="width:100%;padding:10px;margin-bottom:10px;">
+
+  <input type="number" id="creditCost" placeholder="Credit Cost (e.g. 10)" 
+    style="width:100%;padding:10px;margin-bottom:10px;">
+
+  <button onclick="postJob()">Post Job</button>
+</div>
+
+<script>
+fetch("navbar.html")
+  .then(res => res.text())
+  .then(data => document.getElementById("navbar-container").innerHTML = data)
+  .then(() => { 
+      const script = document.createElement("script");
+      script.src = "navbar.js";
+      document.body.appendChild(script);
+  });
+
+const db = firebase.firestore();
+
+firebase.auth().onAuthStateChanged(user => {
   if (!user) {
-    // User not logged in → redirect to login page
     window.location.href = "login.html";
   }
 });
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-      authDomain: "localjobsuk-fcaba.firebaseapp.com",
-      projectId: "localjobsuk-fcaba",
-      storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-      messagingSenderId: "340038751338",
-      appId: "1:340038751338:web:05cca93a73a61de10d2613"
-    };
+async function postJob() {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+  const location = document.getElementById("location").value;
+  const creditCost = parseInt(document.getElementById("creditCost").value) || 1;
 
-    window.postJob = async function () {
-      const title = document.getElementById("title").value;
-      const description = document.getElementById("description").value;
-      const location = document.getElementById("location").value;
+  if (!title || !description || !location) {
+    alert("Please fill all fields.");
+    return;
+  }
 
-      if (!title || !description || !location) {
-        alert("Please fill all fields");
-        return;
-      }
+  await db.collection("jobs").add({
+    title,
+    description,
+    location,
+    creditCost,
+    posterId: user.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: "active"
+  });
 
-      try {
-        await addDoc(collection(db, "jobs"), {
-          title,
-          description,
-          location,
-          createdAt: new Date(),
-          workersUnlocked: 0
-        });
-
-        alert("Job posted successfully!");
-        document.getElementById("jobForm").reset();
-      } catch (err) {
-        alert(err.message);
-      }
-    };
-  </script>
-</head>
-
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px;">
-  <h2>Post a Job</h2>
-
-  <form id="jobForm" onsubmit="event.preventDefault(); postJob();">
-    <input id="title" placeholder="Job title (e.g. Cut my grass)"
-           style="width:100%; padding:10px; margin-bottom:10px;">
-
-    <textarea id="description" placeholder="Describe the job"
-              style="width:100%; padding:10px; margin-bottom:10px;"></textarea>
-
-    <input id="location" placeholder="Location (Town / Postcode)"
-           style="width:100%; padding:10px; margin-bottom:20px;">
-
-    <button type="submit" style="width:100%; padding:12px;
-               background:#2e7d32; color:white; border:none; cursor:pointer;">
-  Post Job (Free)
-</button>
-
-  </form>
-
-  <br>
-  <a href="index.html">← Back to home</a>
+  alert("Job posted successfully!");
+  window.location.href = "owner-dashboard.html";
+}
+</script>
 
 </body>
 </html>
