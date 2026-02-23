@@ -1,80 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Approve Jobs</title>
-</head>
-<body>
-
-<h2>Pending Jobs (Admin)</h2>
-<div id="jobs"></div>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | LocalJobsUK</title>
+<link rel="stylesheet" href="styles.css">
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  updateDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const app = initializeApp({
-  apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-  projectId: "localjobsuk-fcaba"
-});
-
+// 🔹 Firebase config
+const firebaseConfig = { /* your config */ };
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const jobsDiv = document.getElementById("jobs");
+const auth = getAuth(app);
 
-const snap = await getDocs(collection(db, "jobs"));
+let currentUser = null;
 
-snap.forEach(jobDoc => {
-  const job = jobDoc.data();
-  if (job.status !== "pending_approval") return;
+// Auth & admin check
+onAuthStateChanged(auth, async (user) => {
+  if (!user) window.location.href = "login.html";
+  currentUser = user;
 
-  const selectOptions = Array.from({ length: 20 }, (_, i) =>
-    `<option value="${i + 1}">${i + 1} credits</option>`
-  ).join("");
-
-  const div = document.createElement("div");
-  div.style.border = "1px solid #ccc";
-  div.style.padding = "10px";
-  div.style.marginBottom = "10px";
-
-  div.innerHTML = `
-    <h3>${job.title}</h3>
-    <p>${job.description}</p>
-
-    <label>Credit cost:</label>
-    <select id="cost-${jobDoc.id}">
-      ${selectOptions}
-    </select>
-
-    <br><br>
-    <button onclick="approveJob('${jobDoc.id}')">Approve</button>
-  `;
-
-  jobsDiv.appendChild(div);
-});
-
-window.approveJob = async (jobId) => {
-  const cost = parseInt(document.getElementById(`cost-${jobId}`).value);
-
-  if (cost < 1 || cost > 20) {
-    alert("Credit cost must be between 1 and 20");
-    return;
+  // Optional: verify custom claim
+  const token = await user.getIdTokenResult();
+  if (!token.claims.admin) {
+    alert("Access denied. Admins only.");
+    window.location.href = "index.html";
   }
 
-  await updateDoc(doc(db, "jobs", jobId), {
-    creditCost: cost,
-    status: "approved"
+  loadPendingJobs();
+});
+
+// Load pending jobs
+async function loadPendingJobs() {
+  const q = query(collection(db, "jobs"), where("approved", "==", false));
+  const snapshot = await getDocs(q);
+  const container = document.getElementById("pendingJobs");
+  container.innerHTML = "";
+
+  snapshot.forEach(docSnap => {
+    const job = docSnap.data();
+    const jobId = docSnap.id;
+
+    const div = document.createElement("div");
+    div.className = "job";
+    div.innerHTML = `
+      <h3>${job.title}</h3>
+      <p>${job.description}</p>
+      <p>📍 ${job.location || "N/A"}</p>
+      <input type="number" placeholder="Set credit cost" class="credit-input" min="1">
+      <button class="approve-btn">Approve Job</button>
+      <hr>
+    `;
+    container.appendChild(div);
+
+    const approveBtn = div.querySelector(".approve-btn");
+    const creditInput = div.querySelector(".credit-input");
+
+    approveBtn.addEventListener("click", async () => {
+      const creditCost = parseInt(creditInput.value);
+      if (!creditCost || creditCost < 1) {
+        alert("Please set a valid credit cost.");
+        return;
+      }
+
+      await updateDoc(doc(db, "jobs", jobId), {
+        approved: true,
+        creditCost,
+        unlockCount: 0,
+        unlockedBy: [],
+        createdAt: serverTimestamp()
+      });
+
+      alert("Job approved and credit set!");
+      div.remove();
+    });
   });
-
-  alert("✅ Job approved");
-  location.reload();
-};
+}
 </script>
-
+<style>
+.job { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+input.credit-input { width: 100px; margin-right: 10px; }
+button { background-color: #455a64; color: #fff; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h2>Admin Dashboard — Pending Jobs</h2>
+<div id="pendingJobs"></div>
 </body>
 </html>
