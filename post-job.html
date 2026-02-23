@@ -33,9 +33,10 @@ async function submitJob(event) {
   const location = document.getElementById("location").value.trim();
   const imagesRaw = document.getElementById("images").value.trim();
   const images = imagesRaw ? imagesRaw.split(",").map(s => s.trim()) : [];
+  const category = document.getElementById("category").value;
 
-  if (!title || !description) {
-    alert("Title and description are required.");
+  if (!title || !description || !category) {
+    alert("Title, description, and category are required.");
     return;
   }
 
@@ -45,10 +46,11 @@ async function submitJob(event) {
       description,
       location,
       images,
+      category,      // ✅ New category field
       ownerId: currentUser.uid,
       createdAt: serverTimestamp(),
-      approved: false,      // pending admin approval
-      creditCost: 0          // admin sets later
+      approved: false,
+      creditCost: 0
     });
 
     alert("Job submitted! Waiting for admin approval.");
@@ -57,11 +59,10 @@ async function submitJob(event) {
     alert("Error submitting job: " + err.message);
   }
 }
-
 </script>
 <style>
-form { max-width: 500px; margin: 20px auto; display: flex; flex-direction: column; gap: 10px; }
-input, textarea { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+form { max-width: 500px; margin: 20px auto; display: flex; flex-direction: column; gap: 10px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+input, textarea, select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
 button { background-color: #455a64; color: #fff; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
 </style>
 </head>
@@ -72,6 +73,15 @@ button { background-color: #455a64; color: #fff; border: none; padding: 10px; bo
   <textarea id="description" placeholder="Job description" rows="5" required></textarea>
   <input type="text" id="location" placeholder="Location">
   <input type="text" id="images" placeholder="Image URLs, comma separated">
+  <label for="category">Category:</label>
+  <select id="category" required>
+    <option value="">Select category</option>
+    <option value="Gardening">Gardening</option>
+    <option value="Cleaning">Cleaning</option>
+    <option value="Delivery">Delivery</option>
+    <option value="IT">IT</option>
+    <option value="Other">Other</option>
+  </select>
   <button type="submit">Submit Job</button>
 </form>
 </body>
