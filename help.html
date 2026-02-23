@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Help - LocalJobsUK</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="navbar-container"></div>
+
+<h2>Help & Support</h2>
+
+<div class="info-box">
+  <h3>💼 How to Start Earning Today</h3>
+  <p>
+    1️⃣ Buy credits<br>
+    2️⃣ Unlock jobs<br>
+    3️⃣ Contact customer directly<br>
+    4️⃣ Get hired<br><br>
+    <strong>No commission. No middleman.</strong>
+  </p>
+</div>
+
+<div class="info-box">
+  <h3>✔ Refund Policy</h3>
+  <p>
+    ✔ Automatic refund if no reply within 48 hours<br>
+    ✔ Refund if job is removed<br>
+    ✔ Refund if poster inactive<br>
+    ✔ Credits never expire
+  </p>
+</div>
+
+<div class="info-box">
+  <h3>📩 Contact Us</h3>
+  <p>Email: support@localjobsuk.co.uk</p>
+</div>
+
+<script>
+fetch("navbar.html")
+  .then(res => res.text())
+  .then(data => document.getElementById("navbar-container").innerHTML = data)
+  .then(() => { 
+      const script = document.createElement("script");
+      script.src = "navbar.js";
+      document.body.appendChild(script);
+  });
+</script>
+
+</body>
+</html>
