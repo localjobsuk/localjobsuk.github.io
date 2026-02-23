@@ -1,96 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
+<meta charset="UTF-8">
+<title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
+<meta name="description" content="Find verified local jobs posted by property owners and agencies. Unlock jobs instantly with credits. No commission. No middleman.">
+<meta name="keywords" content="local jobs UK, trades jobs UK, handyman jobs, plumbing jobs UK, property maintenance jobs, grass cutting jobs UK">
+<meta name="author" content="LocalJobsUK">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta name="description" content="Find verified local jobs posted by property owners and agencies. Unlock jobs instantly with credits. No commission. No middleman.">
-  <meta name="keywords" content="local jobs UK, trades jobs UK, handyman jobs, plumbing jobs UK, property maintenance jobs, grass cutting jobs UK">
-  <meta name="author" content="LocalJobsUK">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Open Graph -->
+<meta property="og:title" content="LocalJobsUK | Verified Trade Jobs">
+<meta property="og:description" content="Browse approved local jobs. Unlock contact details instantly.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://yourdomain.co.uk">
 
-  <!-- Open Graph for social sharing -->
-  <meta property="og:title" content="LocalJobsUK | Verified Trade Jobs">
-  <meta property="og:description" content="Browse approved local jobs. Unlock contact details instantly.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://yourdomain.co.uk">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-  <!-- Premium CSS -->
-  <link rel="stylesheet" href="style.css">
+<!-- Styles -->
+<link rel="stylesheet" href="style.css">
+<style>
+  .hero { max-width: 800px; margin: 40px auto; text-align: center; }
+  .hero h1 { font-size: 2.5em; margin-bottom: 10px; }
+  .hero p { font-size: 1.2em; margin-bottom: 20px; color:#333; }
+  .cta-buttons a { padding: 12px 25px; border-radius: 6px; color: #fff; text-decoration: none; margin: 0 10px; display: inline-block; }
+  .primary { background: #203a43; }
+  .secondary { background: #455a64; }
+  .info-box { background:#f7f7f7; padding:20px; margin-top:30px; border-radius:8px; text-align:left; }
+  footer { text-align:center; margin:40px 0 20px; color:#555; }
+</style>
 </head>
 <body>
 
-  <!-- Navbar -->
-  <div id="navbar"></div>
-  <script type="module">
-    import './navbar.js';
-    document.getElementById('navbar').innerHTML = await fetch('navbar.html').then(r=>r.text());
-  </script>
+<!-- Navbar -->
+<div id="navbar-container"></div>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <h1>Hire Local Workers. Fast.</h1>
-    <p>
-      LocalJobsUK connects people who need work done with trusted local workers.
-      Post a job or find paid work in minutes.
-    </p>
+<!-- Hero Section -->
+<section class="hero">
+  <h1>Hire Local Workers. Fast.</h1>
+  <p>LocalJobsUK connects people who need work done with trusted local workers. Post a job or find paid work in minutes.</p>
 
-    <div class="cta-buttons">
-      <a href="post-job.html" class="primary">Post a Job</a>
-      <a href="worker.html" class="primary" style="background:#444;">Find Work</a>
-    </div>
+  <div class="cta-buttons">
+    <a href="post-job.html" class="primary">Post a Job</a>
+    <a href="worker.html" class="secondary">Find Work</a>
+  </div>
 
-    <div class="info-box" style="margin-top:20px;">
-      <strong>How it works:</strong>
-      <ol>
-        <li>Buy credits</li>
-        <li>Unlock jobs</li>
-        <li>Contact job owner directly</li>
-        <li>Get hired — no commission!</li>
-      </ol>
-    </div>
-  </section>
+  <div class="info-box">
+    <strong>How it works:</strong>
+    <ol>
+      <li>Buy credits</li>
+      <li>Unlock jobs</li>
+      <li>Contact job owner directly</li>
+      <li>Get hired — no commission!</li>
+    </ol>
+  </div>
+</section>
 
-  <!-- Footer -->
-  <footer>
-    <p>© 2026 LocalJobsUK</p>
-  </footer>
+<!-- Footer -->
+<footer>
+  <p>© 2026 LocalJobsUK</p>
+</footer>
 
-  <!-- Firebase Login Script -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com"
-    };
+<!-- Firebase Config & Navbar Script -->
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const navLinks = document.getElementById("navLinks");
+// Load navbar and attach auth links
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("navbar.html")
+    .then(r => r.text())
+    .then(html => document.getElementById("navbar-container").innerHTML = html)
+    .then(() => {
+      const s = document.createElement("script");
+      s.src = "navbar.js";
+      document.body.appendChild(s);
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        navLinks.innerHTML = `
-          <a href="owner-dashboard.html">My Jobs</a>
-          <a onclick="logout()">Logout</a>
-        `;
-      } else {
-        navLinks.innerHTML = `
-          <a href="login.html">Login</a>
-          <a href="post-job.html">Post a Job</a>
-        `;
-      }
-    });
-
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "index.html";
+      // Auth links
+      const navLinks = document.getElementById("navLinks");
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          navLinks.innerHTML = `
+            <a href="owner-dashboard.html">My Jobs</a>
+            <a href="#" onclick="logout()">Logout</a>
+          `;
+        } else {
+          navLinks.innerHTML = `
+            <a href="login.html">Login</a>
+            <a href="post-job.html">Post a Job</a>
+          `;
+        }
       });
-    }
-  </script>
+    });
+});
+
+function logout() {
+  auth.signOut().then(() => window.location.href = "index.html");
+}
+</script>
 
 </body>
 </html>
