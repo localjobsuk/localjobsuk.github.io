@@ -1,0 +1,44 @@
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f9f9f9;
+  margin:0;
+  padding:0;
+}
+
+.navbar a {
+  text-decoration: none;
+  padding: 10px;
+  color: white;
+}
+
+.navbar a:hover {
+  background-color: #555;
+  border-radius: 5px;
+}
+
+.job-card, .credit-pack {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  margin: 15px;
+  padding: 15px;
+}
+
+button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.tooltip {
+  font-size: 0.9rem;
+  color: #555;
+}
