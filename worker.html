@@ -12,20 +12,13 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // 🔹 Your Firebase config here
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "..."
-};
+const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const functions = getFunctions(app);
 
-// 🔹 Cloud Function
+// 🔹 Callable Cloud Function
 const unlockJobFn = httpsCallable(functions, "unlockJob");
 
 // DOM Elements
@@ -64,7 +57,6 @@ async function loadJobs() {
 
     if (!job.approved) continue;
 
-    // Public fields
     const title = job.title;
     const description = job.description;
     const location = job.location;
@@ -83,9 +75,9 @@ async function loadJobs() {
       <p>📍 ${location}</p>
       ${images.map(img => `<img src="${img}" class="job-img">`).join("")}
       <p>💰 Credits to unlock: ${creditCost}</p>
-      <p>📞 Phone: <span class="blurred">${phonePreview}</span></p>
-      <p>📧 Email: <span class="blurred">${emailPreview}</span></p>
-      <button class="unlock-btn">Unlock Job</button>
+      <p>📞 Phone: <span class="blurred phone">${phonePreview}</span></p>
+      <p>📧 Email: <span class="blurred email">${emailPreview}</span></p>
+      <button class="unlock-btn">Unlock Job (${creditCost} credits)</button>
       <hr>
     `;
     jobsContainer.appendChild(div);
@@ -103,6 +95,7 @@ async function handleUnlock(jobId, jobDiv, creditCost) {
 
   try {
     const result = await unlockJobFn({ jobId });
+
     if (result.data.success) {
       // Update credits
       const userSnap = await getDoc(doc(db, "users", currentUser.uid));
@@ -112,8 +105,16 @@ async function handleUnlock(jobId, jobDiv, creditCost) {
       const metaDoc = await getDoc(doc(db, "jobs", jobId, "private", "meta"));
       if (metaDoc.exists()) {
         const meta = metaDoc.data();
-        jobDiv.querySelector(".blurred").innerText = meta.fullPhone;
-        jobDiv.querySelector(".blurred").nextElementSibling.innerText = meta.fullEmail;
+
+        // Reveal full phone
+        const phoneEl = jobDiv.querySelector(".phone");
+        phoneEl.innerText = meta.fullPhone;
+        phoneEl.classList.add("revealed");
+
+        // Reveal full email
+        const emailEl = jobDiv.querySelector(".email");
+        emailEl.innerText = meta.fullEmail;
+        emailEl.classList.add("revealed");
       }
 
       unlockBtn.innerText = "✅ Job Unlocked";
@@ -127,13 +128,6 @@ async function handleUnlock(jobId, jobDiv, creditCost) {
   }
 }
 </script>
-<style>
-.job { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-.job-img { width: 100px; height: 100px; object-fit: cover; margin-right: 5px; }
-.unlock-btn { background-color: #455a64; color: #fff; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-.unlock-btn:disabled { background-color: #aaa; cursor: not-allowed; }
-.blurred { filter: blur(4px); }
-</style>
 </head>
 <body>
 <h2>Available Jobs</h2>
