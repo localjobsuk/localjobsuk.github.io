@@ -1,183 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin – Job Approval | LocalJobsUK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
-    .job {
-      border: 1px solid #ccc;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-    }
-    .admin {
-      background: #f3f3f3;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-    }
-    input {
-      padding: 6px;
-      width: 70px;
-      margin-right: 10px;
-    }
-    button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      background: #203a43;
-      color: white;
-      font-weight: bold;
-    }
-    button.reject {
-      background: #b71c1c;
-    }
-  </style>
-</head>
-
-<body>
-
-<h2>Admin – Job Approval</h2>
-
-<div class="admin">
-  You are logged in as <strong>ADMIN</strong>
-  &nbsp; | &nbsp;
-  <button onclick="logout()" class="reject">Logout</button>
-</div>
-
-<div id="jobs">
-  <p>Loading pending jobs…</p>
-</div>
-
-<a href="index.html">← Back to home</a>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | LocalJobsUK</title>
+<link rel="stylesheet" href="styles.css">
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    query,
-    where,
-    getDocs,
-    doc,
-    updateDoc,
-    deleteDoc
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import {
-    getAuth,
-    onAuthStateChanged,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDooNTj5INtuTTJqmgrA-kOA_i_JFDdQyw",
-    authDomain: "localjobsuk-fcaba.firebaseapp.com",
-    projectId: "localjobsuk-fcaba",
-    storageBucket: "localjobsuk-fcaba.firebasestorage.app",
-    messagingSenderId: "340038751338",
-    appId: "1:340038751338:web:05cca93a73a61de10d2613"
-  };
+const firebaseConfig = { /* your config */ };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+let currentUser = null;
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user || !user.admin) {
-      alert("Access denied");
-      window.location.href = "index.html";
-      return;
-    }
-    loadPendingJobs();
-  });
+onAuthStateChanged(auth, async (user) => {
+  if (!user) window.location.href = "login.html";
+  currentUser = user;
 
-  async function loadPendingJobs() {
-    const jobsDiv = document.getElementById("jobs");
-    jobsDiv.innerHTML = "";
-
-    const q = query(
-      collection(db, "jobs"),
-      where("approved", "==", false)
-    );
-
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      jobsDiv.innerHTML = "<p>No pending jobs.</p>";
-      return;
-    }
-
-    snapshot.forEach((jobDoc) => {
-      const job = jobDoc.data();
-      const jobId = jobDoc.id;
-
-      const div = document.createElement("div");
-      div.className = "job";
-
-      div.innerHTML = `
-        <h3>${job.title}</h3>
-        <p><strong>Location:</strong> ${job.location}</p>
-        <p>${job.description}</p>
-
-        <label>
-          Credit cost (1–20):
-          <input type="number" min="1" max="20" value="1" id="cost-${jobId}">
-        </label>
-
-        <br><br>
-
-        <button onclick="approveJob('${jobId}')">
-          Approve Job
-        </button>
-
-        <button class="reject" onclick="rejectJob('${jobId}')">
-          Reject
-        </button>
-      `;
-
-      jobsDiv.appendChild(div);
-    });
+  const token = await user.getIdTokenResult();
+  if (!token.claims.admin) {
+    alert("Access denied. Admins only.");
+    window.location.href = "index.html";
   }
 
-  window.approveJob = async function (jobId) {
-    const costInput = document.getElementById(`cost-${jobId}`);
-    const cost = parseInt(costInput.value);
+  loadAllJobs();
+});
 
-    if (cost < 1 || cost > 20) {
-      alert("Credit cost must be between 1 and 20");
-      return;
-    }
+async function loadAllJobs() {
+  const jobsCol = collection(db, "jobs");
+  const snapshot = await getDocs(jobsCol);
+  const container = document.getElementById("allJobs");
+  container.innerHTML = "";
 
-    await updateDoc(doc(db, "jobs", jobId), {
-      approved: true,
-      creditCost: cost,
-      workersUnlocked: 0,
-      unlockedBy: []
-    });
+  snapshot.forEach(docSnap => {
+    const job = docSnap.data();
+    const div = document.createElement("div");
+    div.className = "job";
 
-    loadPendingJobs();
-  };
-
-  window.rejectJob = async function (jobId) {
-    if (!confirm("Reject and delete this job?")) return;
-    await deleteDoc(doc(db, "jobs", jobId));
-    loadPendingJobs();
-  };
-
-  window.logout = async function () {
-    await signOut(auth);
-    window.location.href = "login.html";
-  };
+    div.innerHTML = `
+      <h3>${job.title} <span class="category-badge">${job.category || "Uncategorized"}</span></h3>
+      <p>${job.description}</p>
+      <p>📍 ${job.location || "N/A"} • 💰 Credits: ${job.creditCost || 0} • 🕒 Posted: ${job.createdAt?.toDate().toLocaleString() || "N/A"}</p>
+      <p>Owner ID: ${job.ownerId}</p>
+      <p>Status: ${job.approved ? "Approved ✅" : "Pending ⚠️"}</p>
+      <hr>
+    `;
+    container.appendChild(div);
+  });
+}
 </script>
-
+<style>
+.job { border:1px solid #ccc; padding:15px; margin-bottom:20px; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+.category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; margin-left:6px; }
+</style>
+</head>
+<body>
+<h2>Admin Dashboard — All Jobs</h2>
+<div id="allJobs"></div>
 </body>
 </html>
