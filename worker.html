@@ -17,72 +17,110 @@
 <h2>Available Jobs</h2>
 
 <div class="info-box">
-  <strong>How It Works:</strong>
-  <p>
-    1️⃣ Browse available jobs below.<br>
-    2️⃣ Each job shows how many credits are required to unlock it.<br>
-    3️⃣ Click <strong>Unlock Job</strong> to reveal contact details.<br>
-    4️⃣ If you run out of credits, purchase more from the top menu.
-  </p>
+  <strong>Browse jobs below.</strong><br>
+  Unlock to see contact details. Limited availability per job.
 </div>
 
 <div id="jobs-container"></div>
 
 <script>
-  // Load navbar
-  fetch("navbar.html")
-    .then(res => res.text())
-    .then(data => document.getElementById("navbar-container").innerHTML = data)
-    .then(() => { 
-        const script = document.createElement("script");
-        script.src = "navbar.js";
-        document.body.appendChild(script);
-    });
-
-  const db = firebase.firestore();
-
-  db.collection("jobs").get().then(snapshot => {
-    const jobsContainer = document.getElementById("jobs-container");
-
-    snapshot.forEach(doc => {
-      const job = doc.data();
-
-      const jobCard = document.createElement("div");
-      jobCard.className = "job-card";
-
-      jobCard.innerHTML = `
-        <h3>${job.title}</h3>
-        <p>${job.description}</p>
-        <p class="credit-cost">Credits Required: ${job.creditCost || 1}</p>
-        <button onclick="unlockJob('${doc.id}', ${job.creditCost || 1})">
-          Unlock Job
-        </button>
-      `;
-
-      jobsContainer.appendChild(jobCard);
-    });
+fetch("navbar.html")
+  .then(res => res.text())
+  .then(data => document.getElementById("navbar-container").innerHTML = data)
+  .then(() => { 
+      const script = document.createElement("script");
+      script.src = "navbar.js";
+      document.body.appendChild(script);
   });
 
-  async function unlockJob(jobId, cost) {
-    const user = firebase.auth().currentUser;
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
+const db = firebase.firestore();
 
-    const userRef = db.collection("users").doc(user.uid);
-    const userDoc = await userRef.get();
-    const credits = userDoc.data().credits || 0;
+function timeAgo(timestamp) {
+  if (!timestamp) return "Just now";
+  const now = new Date();
+  const seconds = Math.floor((now - timestamp.toDate()) / 1000);
+  const hours = Math.floor(seconds / 3600);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days} day(s) ago`;
+  if (hours > 0) return `${hours} hour(s) ago`;
+  return "Just now";
+}
 
-    if (credits >= cost) {
-      await userRef.update({ credits: credits - cost });
-      alert("Job unlocked successfully!");
-      // Keep your max 3 workers logic here
-    } else {
-      alert("You don't have enough credits.");
-      window.location.href = "buy-credits.html";
-    }
+db.collection("jobs").where("status", "==", "active").get()
+.then(snapshot => {
+  snapshot.forEach(doc => {
+    const job = doc.data();
+    const jobCard = document.createElement("div");
+    jobCard.className = "job-card";
+
+    const isNew = job.createdAt &&
+      (new Date() - job.createdAt.toDate()) < 86400000;
+
+    jobCard.innerHTML = `
+      <h3>
+        ${job.title}
+        ${isNew ? '<span class="new-badge">🔥 NEW</span>' : ''}
+      </h3>
+
+      <p>${job.description}</p>
+
+      <p>📍 ${job.location}</p>
+      <p>🕒 ${timeAgo(job.createdAt)}</p>
+
+      <p class="credit-cost">Unlock for ${job.creditCost || 1} Credits</p>
+
+      <button onclick="unlockJob('${doc.id}', ${job.creditCost || 1})">
+        Unlock Job
+      </button>
+
+      <small class="refund-note">
+        ✔ Automatic refund if no reply within 48h<br>
+        ✔ Credits never expire
+      </small>
+    `;
+
+    document.getElementById("jobs-container").appendChild(jobCard);
+  });
+});
+
+async function unlockJob(jobId, cost) {
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    window.location.href = "login.html";
+    return;
   }
+
+  const unlockRef = db.collection("users")
+    .doc(user.uid)
+    .collection("unlocks")
+    .doc(jobId);
+
+  const unlockDoc = await unlockRef.get();
+  if (unlockDoc.exists) {
+    alert("Already unlocked.");
+    return;
+  }
+
+  const userRef = db.collection("users").doc(user.uid);
+  const userDoc = await userRef.get();
+  const credits = userDoc.data().credits || 0;
+
+  if (credits < cost) {
+    window.location.href = "buy-credits.html";
+    return;
+  }
+
+  await userRef.update({ credits: credits - cost });
+
+  await unlockRef.set({
+    jobId,
+    cost,
+    unlockedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    refunded: false
+  });
+
+  alert("Job unlocked successfully!");
+}
 </script>
 
 </body>
