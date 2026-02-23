@@ -17,24 +17,14 @@
 <h2>Post a Job</h2>
 
 <div class="info-box">
-  <strong>Post Your Job</strong>
-  <p>
-    Describe your job clearly. Workers will see photos and details before unlocking.
-  </p>
+  Fill in the job details below.
 </div>
 
-<div style="max-width:600px;margin:20px auto;">
-  <input type="text" id="title" placeholder="Job Title" style="width:100%;padding:10px;margin-bottom:10px;">
-  
-  <textarea id="description" placeholder="Job Description" 
-    style="width:100%;padding:10px;margin-bottom:10px;"></textarea>
-  
-  <input type="text" id="location" placeholder="Location (e.g. London)" 
-    style="width:100%;padding:10px;margin-bottom:10px;">
-
-  <input type="number" id="creditCost" placeholder="Credit Cost (e.g. 10)" 
-    style="width:100%;padding:10px;margin-bottom:10px;">
-
+<div class="form-box">
+  <input type="text" id="title" placeholder="Job Title">
+  <textarea id="description" placeholder="Job Description"></textarea>
+  <input type="text" id="location" placeholder="Location (e.g. London)">
+  <input type="number" id="creditCost" placeholder="Credit Cost (e.g. 10)">
   <button onclick="postJob()">Post Job</button>
 </div>
 
@@ -51,14 +41,11 @@ fetch("navbar.html")
 const db = firebase.firestore();
 
 firebase.auth().onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "login.html";
-  }
+  if (!user) window.location.href = "login.html";
 });
 
 async function postJob() {
   const user = firebase.auth().currentUser;
-  if (!user) return;
 
   const title = document.getElementById("title").value;
   const description = document.getElementById("description").value;
