@@ -1,145 +1,211 @@
-/* ================= GLOBAL ================= */
+/* ================== GLOBAL ================== */
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  padding: 0 15px;
-  background-color: #f5f5f5;
-  color: #333;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  background: #F8F9FA;
+  color: #34495E;
 }
 
-h2 {
-  text-align: center;
-  margin-top: 20px;
-  color: #2c3e50;
+h1,h2,h3,h4,h5,h6 {
+  font-family: 'Montserrat', sans-serif;
+  margin: 0 0 10px 0;
+  color: #2C3E50;
 }
 
-/* ================= JOB CARDS ================= */
-.job {
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-.job:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.job h3 {
-  margin-top: 0;
-  color: #34495e;
-}
-
-.job p {
+p {
+  line-height: 1.6;
   margin: 5px 0;
-  line-height: 1.4;
 }
 
-/* ================= IMAGES ================= */
-.job-img {
-  width: 120px;
-  height: 100px;
-  object-fit: cover;
-  margin-right: 5px;
-  border-radius: 5px;
-  transition: transform 0.3s ease;
-  cursor: pointer;
-}
-
-.job-img:hover {
-  transform: scale(1.05);
-}
-
-/* ================= BUTTONS ================= */
-button {
-  background-color: #455a64;
+/* ================== NAVBAR ================== */
+nav {
+  background-color: #2C3E50;
   color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+nav a {
+  color: #fff;
+  font-weight: 600;
+  margin: 0 10px;
+  transition: color 0.3s;
+}
+
+nav a:hover {
+  color: #E67E22;
+}
+
+/* ================== BUTTONS ================== */
+button {
+  padding: 10px 18px;
+  border-radius: 6px;
   border: none;
-  padding: 8px 14px;
-  border-radius: 5px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease, transform 0.1s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
-button:hover:not(:disabled) {
-  background-color: #2c3e50;
-  transform: translateY(-1px);
+button.primary {
+  background-color: #E67E22;
+  color: #fff;
 }
 
-button:disabled {
-  background-color: #aaa;
+button.primary:hover {
+  background-color: #D35400;
+}
+
+button.disabled, button:disabled {
+  background-color: #BDC3C7;
   cursor: not-allowed;
 }
 
-/* ================= BLURRED CONTACT ================= */
-.blurred {
+/* ================== CARDS ================== */
+.job-card, .card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover, .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+/* ================== CATEGORY BADGES ================== */
+.category-badge {
   display: inline-block;
-  filter: blur(4px);
-  transition: filter 0.5s ease;
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  background-color: #3498DB;
+  color: #fff;
+  margin-left: 6px;
+}
+
+/* ================== STATUS BADGES ================== */
+.status-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  color: #fff;
+}
+
+.status-approved { background-color: #2ECC71; }
+.status-pending { background-color: #E67E22; }
+.status-unavailable { background-color: #BDC3C7; }
+
+/* ================== FORM ELEMENTS ================== */
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0 12px 0;
+  border-radius: 6px;
+  border: 1px solid #BDC3C7;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: all 0.3s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #E67E22;
+  box-shadow: 0 0 5px rgba(230,126,34,0.3);
+}
+
+/* ================== JOB IMAGES ================== */
+.job-img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 10px 0;
+  display: block;
+}
+
+/* ================== BLURRED CONTACT ================== */
+.blurred {
+  color: transparent;
+  background: #BDC3C7;
+  border-radius: 20px;
+  display: inline-block;
+  padding: 2px 8px;
+  position: relative;
+  transition: all 0.5s ease;
 }
 
 .blurred.revealed {
-  filter: blur(0);
-  color: #2c3e50;
+  color: #34495E;
+  background: transparent;
 }
 
-/* ================= FORMS ================= */
-form {
-  max-width: 500px;
-  margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-input, textarea {
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
+/* ================== FILTERS ================== */
+#categoryFilter {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #BDC3C7;
+  margin-bottom: 20px;
   font-size: 14px;
 }
 
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #2c3e50;
-  box-shadow: 0 0 5px rgba(44,62,80,0.3);
-}
-
-/* ================= ADMIN DASHBOARD ================= */
-#pendingJobs {
-  max-width: 800px;
-  margin: 20px auto;
-}
-
-.credit-input {
-  width: 100px;
-  margin-right: 10px;
-  padding: 6px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 600px) {
-  .job-img {
-    width: 80px;
-    height: 80px;
+/* ================== RESPONSIVE ================== */
+@media (max-width: 768px) {
+  nav {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  form {
+  nav a {
+    margin: 5px 0;
+  }
+
+  .job-card {
     padding: 15px;
   }
+}
 
-  button {
-    width: 100%;
-  }
+/* ================== TOAST / SUCCESS MESSAGES ================== */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2ECC71;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s;
+  z-index: 999;
+}
+
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ================== INFO BOX ================== */
+.info-box {
+  background: #ECF0F1;
+  padding: 15px 20px;
+  border-left: 4px solid #E67E22;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
 }
