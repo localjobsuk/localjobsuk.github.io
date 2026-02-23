@@ -1,133 +1,77 @@
-firebase.auth().onAuthStateChanged((user) => {
-  const protectedPages = ["post-job.html", "buy-credits.html"];
-  const currentPage = location.pathname.split("/").pop();
-  if (protectedPages.includes(currentPage) && !user) {
-    window.location.href = "login.html";
-  }
-});
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Buy Credits | LocalJobsUK</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 420px;
-      margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    .credits {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      margin: 10px 0;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      background: #0a7cff;
-      color: white;
-    }
-    button:hover {
-      background: #055fd4;
-    }
-    .back {
-      margin-top: 15px;
-      background: #444;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Buy Credits - LocalJobsUK</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="style.css">
+<style>
+  .credit-pack { 
+    border:1px solid #ccc; 
+    padding:20px; 
+    margin:10px; 
+    display:inline-block; 
+    text-align:center; 
+    cursor:pointer; 
+    width:120px;
+    border-radius:8px;
+    background:#f7f7f7;
+    transition:0.2s;
+  }
+  .credit-pack:hover {
+    background:#e0e0e0;
+  }
+</style>
 </head>
 <body>
+<div id="navbar-container"></div>
 
-<div class="container">
-  <h1>Buy Credits</h1>
-  <div class="credits" id="creditDisplay">Loading credits...</div>
-
-  <button onclick="addCredits(5)">Buy 5 Credits (£5)</button>
-  <button onclick="addCredits(10)">Buy 10 Credits (£9)</button>
-  <button onclick="addCredits(25)">Buy 25 Credits (£20)</button>
-
-  <button class="back" onclick="goBack()">Back to Jobs</button>
+<h2>Buy Credits</h2>
+<div id="packs-container">
+  <div class="credit-pack" onclick="buyCredits(10)">10 Credits<br>£5</div>
+  <div class="credit-pack" onclick="buyCredits(30)">30 Credits<br>£12</div>
+  <div class="credit-pack" onclick="buyCredits(100)">100 Credits<br>£35</div>
 </div>
 
 <script>
-  // 🔧 YOUR FIREBASE CONFIG
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-  };
+  // Load navbar
+  fetch("navbar.html")
+    .then(res => res.text())
+    .then(data => document.getElementById("navbar-container").innerHTML = data)
+    .then(() => { 
+        const script = document.createElement("script");
+        script.src = "navbar.js";
+        document.body.appendChild(script);
+    });
 
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentUser;
-  let userRef;
-
-  auth.onAuthStateChanged(async (user) => {
+  // Force login
+  firebase.auth().onAuthStateChanged(user => {
     if (!user) {
       window.location.href = "login.html";
-      return;
     }
-
-    currentUser = user;
-    userRef = db.collection("users").doc(user.uid);
-
-    const snap = await userRef.get();
-    const credits = snap.exists ? snap.data().credits || 0 : 0;
-    document.getElementById("creditDisplay").innerText =
-      `Current Credits: ${credits}`;
   });
 
-  async function addCredits(amount) {
-    if (!currentUser) return;
+  async function buyCredits(amount) {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
 
-    try {
-      await db.runTransaction(async (transaction) => {
-        const snap = await transaction.get(userRef);
-        const currentCredits = snap.exists ? snap.data().credits || 0 : 0;
-        transaction.set(userRef, {
-          credits: currentCredits + amount
-        }, { merge: true });
-      });
+    const userRef = db.collection("users").doc(user.uid);
+    const userDoc = await userRef.get();
+    const currentCredits = userDoc.data().credits || 0;
 
-      alert(`✅ ${amount} credits added!`);
-      window.location.href = "worker.html";
-    } catch (err) {
-      alert("❌ Failed to add credits");
-      console.error(err);
-    }
-  }
+    // Add credits
+    await userRef.update({ credits: currentCredits + amount });
 
-  function goBack() {
-    window.location.href = "worker.html";
+    alert(`You purchased ${amount} credits!`);
+
+    // Update navbar display
+    const creditsDisplay = document.getElementById("credits-display");
+    if (creditsDisplay) creditsDisplay.textContent = `Credits: ${currentCredits + amount}`;
   }
 </script>
-
 </body>
 </html>
