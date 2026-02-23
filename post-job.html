@@ -2,75 +2,77 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Post a Job - LocalJobsUK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post a Job | LocalJobsUK</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+// 🔹 Firebase config
+const firebaseConfig = { /* your config */ };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+let currentUser = null;
 
-<div id="navbar-container"></div>
-
-<h2>Post a Job</h2>
-
-<div class="info-box">
-  Fill in the job details below.
-</div>
-
-<div class="form-box">
-  <input type="text" id="title" placeholder="Job Title">
-  <textarea id="description" placeholder="Job Description"></textarea>
-  <input type="text" id="location" placeholder="Location (e.g. London)">
-  <input type="number" id="creditCost" placeholder="Credit Cost (e.g. 10)">
-  <button onclick="postJob()">Post Job</button>
-</div>
-
-<script>
-fetch("navbar.html")
-  .then(res => res.text())
-  .then(data => document.getElementById("navbar-container").innerHTML = data)
-  .then(() => { 
-      const script = document.createElement("script");
-      script.src = "navbar.js";
-      document.body.appendChild(script);
-  });
-
-const db = firebase.firestore();
-
-firebase.auth().onAuthStateChanged(user => {
+// Auth check
+onAuthStateChanged(auth, user => {
   if (!user) window.location.href = "login.html";
+  else currentUser = user;
 });
 
-async function postJob() {
-  const user = firebase.auth().currentUser;
+// Submit job
+async function submitJob(event) {
+  event.preventDefault();
 
-  const title = document.getElementById("title").value;
-  const description = document.getElementById("description").value;
-  const location = document.getElementById("location").value;
-  const creditCost = parseInt(document.getElementById("creditCost").value) || 1;
+  const title = document.getElementById("title").value.trim();
+  const description = document.getElementById("description").value.trim();
+  const location = document.getElementById("location").value.trim();
+  const imagesRaw = document.getElementById("images").value.trim();
+  const images = imagesRaw ? imagesRaw.split(",").map(s => s.trim()) : [];
 
-  if (!title || !description || !location) {
-    alert("Please fill all fields.");
+  if (!title || !description) {
+    alert("Title and description are required.");
     return;
   }
 
-  await db.collection("jobs").add({
-    title,
-    description,
-    location,
-    creditCost,
-    posterId: user.uid,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    status: "active"
-  });
+  try {
+    await addDoc(collection(db, "jobs"), {
+      title,
+      description,
+      location,
+      images,
+      ownerId: currentUser.uid,
+      createdAt: serverTimestamp(),
+      approved: false,      // pending admin approval
+      creditCost: 0          // admin sets later
+    });
 
-  alert("Job posted successfully!");
-  window.location.href = "owner-dashboard.html";
+    alert("Job submitted! Waiting for admin approval.");
+    document.getElementById("jobForm").reset();
+  } catch (err) {
+    alert("Error submitting job: " + err.message);
+  }
 }
-</script>
 
+</script>
+<style>
+form { max-width: 500px; margin: 20px auto; display: flex; flex-direction: column; gap: 10px; }
+input, textarea { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+button { background-color: #455a64; color: #fff; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h2>Post a Job</h2>
+<form id="jobForm" onsubmit="submitJob(event)">
+  <input type="text" id="title" placeholder="Job title" required>
+  <textarea id="description" placeholder="Job description" rows="5" required></textarea>
+  <input type="text" id="location" placeholder="Location">
+  <input type="text" id="images" placeholder="Image URLs, comma separated">
+  <button type="submit">Submit Job</button>
+</form>
 </body>
 </html>
