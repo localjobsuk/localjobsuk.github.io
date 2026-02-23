@@ -3,40 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <title>Buy Credits - LocalJobsUK</title>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <link rel="stylesheet" href="style.css">
-<style>
-  .credit-pack { 
-    border:1px solid #ccc; 
-    padding:20px; 
-    margin:10px; 
-    display:inline-block; 
-    text-align:center; 
-    cursor:pointer; 
-    width:120px;
-    border-radius:8px;
-    background:#f7f7f7;
-    transition:0.2s;
-  }
-  .credit-pack:hover {
-    background:#e0e0e0;
-  }
-</style>
 </head>
 <body>
+
 <div id="navbar-container"></div>
 
 <h2>Buy Credits</h2>
+
+<div class="info-box">
+  <strong>Need More Credits?</strong>
+  <p>
+    Select one of the credit packs below.<br>
+    Your credit balance will update instantly and never expires.
+  </p>
+</div>
+
 <div id="packs-container">
-  <div class="credit-pack" onclick="buyCredits(10)">10 Credits<br>£5</div>
-  <div class="credit-pack" onclick="buyCredits(30)">30 Credits<br>£12</div>
-  <div class="credit-pack" onclick="buyCredits(100)">100 Credits<br>£35</div>
+  <div class="credit-pack" onclick="buyCredits(10)">
+    <div class="pack-title">10 Credits</div>
+    <div class="pack-price">£5</div>
+  </div>
+
+  <div class="credit-pack" onclick="buyCredits(30)">
+    <div class="pack-title">30 Credits</div>
+    <div class="pack-price">£12</div>
+  </div>
+
+  <div class="credit-pack" onclick="buyCredits(100)">
+    <div class="pack-title">100 Credits</div>
+    <div class="pack-price">£35</div>
+  </div>
 </div>
 
 <script>
-  // Load navbar
   fetch("navbar.html")
     .then(res => res.text())
     .then(data => document.getElementById("navbar-container").innerHTML = data)
@@ -48,7 +53,6 @@
 
   const db = firebase.firestore();
 
-  // Force login
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
       window.location.href = "login.html";
@@ -63,15 +67,12 @@
     const userDoc = await userRef.get();
     const currentCredits = userDoc.data().credits || 0;
 
-    // Add credits
     await userRef.update({ credits: currentCredits + amount });
 
-    alert(`You purchased ${amount} credits!`);
-
-    // Update navbar display
-    const creditsDisplay = document.getElementById("credits-display");
-    if (creditsDisplay) creditsDisplay.textContent = `Credits: ${currentCredits + amount}`;
+    alert(`Successfully added ${amount} credits!`);
+    location.reload();
   }
 </script>
+
 </body>
 </html>
