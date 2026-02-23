@@ -1,151 +1,145 @@
-/* ===== Global ===== */
+/* ================= GLOBAL ================= */
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #f4f6f9;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  padding: 0;
+  padding: 0 15px;
+  background-color: #f5f5f5;
+  color: #333;
 }
 
 h2 {
   text-align: center;
-  margin-top: 30px;
-  color: #333;
+  margin-top: 20px;
+  color: #2c3e50;
 }
 
-/* ===== Navbar ===== */
-.navbar {
-  background-color: #222;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.navbar a {
-  color: white;
-  text-decoration: none;
-  margin-right: 18px;
-  font-weight: 500;
-}
-
-.navbar a:hover {
-  color: #00c3ff;
-}
-
-#credits-display {
-  margin-left: auto;
-  margin-right: 20px;
-  font-weight: bold;
-  color: #00ffae;
-}
-
-/* ===== Info Boxes ===== */
-.info-box {
-  background: #eaf4ff;
-  padding: 18px;
-  margin: 20px auto;
+/* ================= JOB CARDS ================= */
+.job {
+  background-color: #fff;
+  border: 1px solid #ccc;
   border-radius: 8px;
-  max-width: 900px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* ===== Job Cards ===== */
-.job-card {
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
-  margin: 15px auto;
-  max-width: 900px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  transition: 0.2s ease;
-}
-
-.job-card:hover {
+.job:hover {
   transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.job-card h3 {
+.job h3 {
   margin-top: 0;
-  color: #222;
+  color: #34495e;
 }
 
-.credit-cost {
-  font-weight: bold;
-  color: #007bff;
+.job p {
+  margin: 5px 0;
+  line-height: 1.4;
 }
 
-/* ===== Buttons ===== */
+/* ================= IMAGES ================= */
+.job-img {
+  width: 120px;
+  height: 100px;
+  object-fit: cover;
+  margin-right: 5px;
+  border-radius: 5px;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.job-img:hover {
+  transform: scale(1.05);
+}
+
+/* ================= BUTTONS ================= */
 button {
-  padding: 10px 18px;
-  background-color: #007bff;
-  color: white;
+  background-color: #455a64;
+  color: #fff;
   border: none;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 5px;
   cursor: pointer;
-  margin-top: 10px;
   font-size: 14px;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-button:hover {
-  background-color: #0056b3;
+button:hover:not(:disabled) {
+  background-color: #2c3e50;
+  transform: translateY(-1px);
 }
 
-/* ===== Credit Packs ===== */
-.credit-pack {
-  background: white;
-  border-radius: 10px;
-  padding: 25px;
-  margin: 15px;
-  width: 200px;
+button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* ================= BLURRED CONTACT ================= */
+.blurred {
   display: inline-block;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  transition: 0.2s ease;
-  cursor: pointer;
+  filter: blur(4px);
+  transition: filter 0.5s ease;
 }
 
-.credit-pack:hover {
-  transform: translateY(-4px);
+.blurred.revealed {
+  filter: blur(0);
+  color: #2c3e50;
 }
 
-.pack-title {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.pack-price {
-  margin-top: 10px;
-  font-size: 16px;
-  color: #28a745;
-}
-
-/* ===== Centering Packs ===== */
-#packs-container {
-  text-align: center;
-  margin-top: 30px;
-}
-.form-box {
-  max-width: 600px;
+/* ================= FORMS ================= */
+form {
+  max-width: 500px;
   margin: 20px auto;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
-.form-box input,
-.form-box textarea {
+input, textarea {
   padding: 10px;
-  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 14px;
 }
 
-.new-badge {
-  color: red;
-  font-size: 12px;
-  margin-left: 8px;
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #2c3e50;
+  box-shadow: 0 0 5px rgba(44,62,80,0.3);
 }
 
-.refund-note {
-  display: block;
-  margin-top: 10px;
-  color: green;
-  font-size: 12px;
+/* ================= ADMIN DASHBOARD ================= */
+#pendingJobs {
+  max-width: 800px;
+  margin: 20px auto;
+}
+
+.credit-input {
+  width: 100px;
+  margin-right: 10px;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 600px) {
+  .job-img {
+    width: 80px;
+    height: 80px;
+  }
+
+  form {
+    padding: 15px;
+  }
+
+  button {
+    width: 100%;
+  }
 }
