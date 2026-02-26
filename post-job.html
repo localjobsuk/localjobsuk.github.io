@@ -7,9 +7,12 @@
 <link rel="stylesheet" href="style.css">
 <style>
 form { max-width: 500px; margin: 30px auto; display: flex; flex-direction: column; gap: 12px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-input, textarea, select { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-button { background-color: #455a64; color: #fff; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+input, textarea, select, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+button { background-color: #455a64; color: #fff; border: none; cursor: pointer; font-weight: bold; }
 button:hover { background-color: #203a43; }
+#photoPreviews img { max-width: 80px; max-height: 80px; margin: 5px; border-radius: 5px; }
+.add-photos { display:inline-block; padding:8px 15px; background:#0a7cff; color:#fff; border-radius:5px; cursor:pointer; text-align:center; }
+.add-photos:hover { background:#065ecf; }
 </style>
 </head>
 <body>
@@ -23,7 +26,14 @@ button:hover { background-color: #203a43; }
   <input type="text" id="title" placeholder="Job title" required>
   <textarea id="description" placeholder="Job description" rows="5" required></textarea>
   <input type="text" id="location" placeholder="Location">
-  <input type="text" id="images" placeholder="Image URLs, comma separated">
+
+  <!-- Add Photos -->
+  <div>
+    <div id="addPhotosBtn" class="add-photos">+ Add Photos (up to 5)</div>
+    <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+    <div id="photoPreviews"></div>
+  </div>
+
   <label for="category">Category:</label>
   <select id="category" required>
     <option value="">Select category</option>
@@ -33,6 +43,7 @@ button:hover { background-color: #203a43; }
     <option value="IT">IT</option>
     <option value="Other">Other</option>
   </select>
+
   <button type="submit">Submit Job</button>
 </form>
 
@@ -46,17 +57,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// global logout
+// logout
 window.logout = async function() {
   await signOut(auth);
   window.location.href = "index.html";
 }
 
-// load navbar
+// Load navbar
 document.addEventListener("DOMContentLoaded", async () => {
   const navbarHtml = await fetch("navbar.html").then(r => r.text());
   document.getElementById("navbar-container").innerHTML = navbarHtml;
-  
+
   const navScript = document.createElement("script");
   navScript.src = "navbar.js";
   document.body.appendChild(navScript);
@@ -74,7 +85,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-// handle form submit
+// ---- Image Upload Handling ----
+const addPhotosBtn = document.getElementById("addPhotosBtn");
+const photoInput = document.getElementById("photoInput");
+const photoPreviews = document.getElementById("photoPreviews");
+
+let selectedPhotos = [];
+
+addPhotosBtn.addEventListener("click", () => photoInput.click());
+
+photoInput.addEventListener("change", () => {
+  const files = Array.from(photoInput.files).slice(0, 5); // max 5 images
+  selectedPhotos = files;
+
+  photoPreviews.innerHTML = "";
+  selectedPhotos.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      photoPreviews.appendChild(img);
+    }
+    reader.readAsDataURL(file);
+  });
+});
+
+// ---- Form Submit ----
 document.getElementById("jobForm").addEventListener("submit", async e => {
   e.preventDefault();
   const user = auth.currentUser;
@@ -83,15 +119,24 @@ document.getElementById("jobForm").addEventListener("submit", async e => {
   const title = document.getElementById("title").value.trim();
   const description = document.getElementById("description").value.trim();
   const location = document.getElementById("location").value.trim();
-  const imagesRaw = document.getElementById("images").value.trim();
-  const images = imagesRaw ? imagesRaw.split(",").map(s=>s.trim()) : [];
   const category = document.getElementById("category").value;
 
   if(!title || !description || !category) return alert("Title, description, and category are required.");
 
+  // Convert selected photos to base64 URLs for simple Firestore storage
+  const imageUrls = await Promise.all(selectedPhotos.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  })));
+
   try {
     await addDoc(collection(db,"jobs"),{
-      title, description, location, images, category,
+      title,
+      description,
+      location,
+      images: imageUrls, 
+      category,
       ownerId: user.uid,
       createdAt: serverTimestamp(),
       approved: false,
@@ -99,6 +144,8 @@ document.getElementById("jobForm").addEventListener("submit", async e => {
     });
     alert("Job submitted! Waiting for admin approval.");
     document.getElementById("jobForm").reset();
+    photoPreviews.innerHTML = "";
+    selectedPhotos = [];
   } catch(err) {
     alert("Error submitting job: "+err.message);
   }
