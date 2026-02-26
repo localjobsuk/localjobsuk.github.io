@@ -2,107 +2,96 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Buy Credits | LocalJobsUK</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buy Credits | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  .info-box { max-width: 700px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  .credit-pack { display:inline-block; width:150px; padding:15px; margin:10px; background:#203a43; color:#fff; border-radius:8px; cursor:pointer; text-align:center; font-weight:bold; transition:0.3s; }
-  .credit-pack:hover { background:#0a7cff; }
-  .pack-title { font-size:1.2em; margin-bottom:5px; }
-  .pack-price { font-size:1em; }
-  h2 { text-align:center; margin-top:20px; }
+.container{max-width:800px;margin:20px auto;text-align:center;}
+.credit-packages{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;}
+.package{border:1px solid #ccc;border-radius:8px;padding:20px;width:150px;cursor:pointer;transition:0.2s;}
+.package.selected{border:2px solid #203a43;background:#f0f0f0;}
+.package:hover{background:#f7f7f7;}
+.btn-buy{background:#203a43;color:#fff;padding:12px 25px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+.btn-buy:hover{background:#3498db;}
+.balance{margin-bottom:20px;font-size:1.2em;font-weight:bold;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#203a43;color:#fff;padding:12px 20px;border-radius:10px;display:none;z-index:1000;}
 </style>
 </head>
 <body>
-
-<!-- Navbar -->
 <div id="navbar-container"></div>
 
-<h2>Buy Credits</h2>
-
-<div class="info-box">
-  <strong>Need More Credits?</strong>
-  <p>Select a credit pack below. Your balance updates instantly and never expires!</p>
+<div class="container">
+  <h2>Buy Credits</h2>
+  <div class="balance">Your Credits: <span id="userCredits">0</span></div>
+  <div class="credit-packages">
+    <div class="package" data-credits="5" data-price="5">5 Credits<br>£5</div>
+    <div class="package" data-credits="10" data-price="9">10 Credits<br>£9</div>
+    <div class="package" data-credits="25" data-price="20">25 Credits<br>£20</div>
+    <div class="package" data-credits="50" data-price="35">50 Credits<br>£35</div>
+  </div>
+  <button class="btn-buy" id="buyBtn">Buy Selected Package</button>
 </div>
 
-<div style="text-align:center; margin-top:20px;">
-  <div class="credit-pack" data-amount="10" data-price="£5">
-    <div class="pack-title">10 Credits</div>
-    <div class="pack-price">£5</div>
-  </div>
-  <div class="credit-pack" data-amount="30" data-price="£12">
-    <div class="pack-title">30 Credits</div>
-    <div class="pack-price">£12</div>
-  </div>
-  <div class="credit-pack" data-amount="100" data-price="£35">
-    <div class="pack-title">100 Credits</div>
-    <div class="pack-price">£35</div>
-  </div>
-</div>
-
-<p style="text-align:center; margin-top:15px;">Your current credits: <span id="credits">0</span></p>
+<div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Firebase config
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+const firebaseConfig={/* your config */};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
 
-// Load navbar
-fetch("navbar.html")
-  .then(r => r.text())
-  .then(html => document.getElementById("navbar-container").innerHTML = html)
-  .then(() => import("./navbar.js")); // optional if you have navbar.js logic
+let currentUser=null;
+let selectedPackage=null;
+const userCreditsSpan=document.getElementById("userCredits");
+const toast=document.getElementById("toast");
 
-let currentUser = null;
-const creditsDisplay = document.getElementById("credits");
+function showToast(msg){toast.textContent=msg;toast.style.display="block";setTimeout(()=>{toast.style.display="none";},3000);}
 
-// Auth check
-onAuthStateChanged(auth, async user => {
-  if (!user) window.location.href = "login.html";
-  currentUser = user;
-  await loadUserCredits();
+fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
+
+onAuthStateChanged(auth,user=>{
+  if(!user) {window.location.href="signup.html"; return;}
+  currentUser=user;
+  loadUserCredits();
 });
 
-async function loadUserCredits() {
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  if (userSnap.exists()) creditsDisplay.innerText = userSnap.data().credits || 0;
+async function loadUserCredits(){
+  const userDoc=await getDoc(doc(db,"users",currentUser.uid));
+  const data=userDoc.data();
+  userCreditsSpan.textContent=data?.credits||0;
 }
 
-// Handle clicking a credit pack
-document.querySelectorAll(".credit-pack").forEach(pack => {
-  pack.addEventListener("click", async () => {
-    if (!currentUser) return;
-    const amount = parseInt(pack.dataset.amount);
-    const price = pack.dataset.price;
-
-    const confirmPurchase = confirm(`Do you want to buy ${amount} credits for ${price}?`);
-    if (!confirmPurchase) return;
-
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, { credits: increment(amount) });
-      await loadUserCredits();
-
-      alert(`🎉 Thank you! You have successfully added ${amount} credits to your account.`);
-    } catch (err) {
-      alert("❌ Error adding credits: " + err.message);
-    }
+document.querySelectorAll(".package").forEach(pkg=>{
+  pkg.addEventListener("click",()=>{
+    document.querySelectorAll(".package").forEach(p=>p.classList.remove("selected"));
+    pkg.classList.add("selected");
+    selectedPackage={credits:parseInt(pkg.dataset.credits),price:parseFloat(pkg.dataset.price)};
   });
 });
 
-// Global logout function
-window.logout = async function() {
-  await signOut(auth);
-  window.location.href = "index.html";
-};
-</script>
+document.getElementById("buyBtn").addEventListener("click",async ()=>{
+  if(!selectedPackage){showToast("Please select a package"); return;}
+  // simulate payment here
+  const confirmBuy=confirm(`Pay £${selectedPackage.price} for ${selectedPackage.credits} credits?`);
+  if(!confirmBuy) return;
 
+  try{
+    const userRef=doc(db,"users",currentUser.uid);
+    const userDoc=await getDoc(userRef);
+    const oldCredits=userDoc.data()?.credits||0;
+    await updateDoc(userRef,{credits:oldCredits+selectedPackage.credits});
+    showToast(`🎉 Successfully bought ${selectedPackage.credits} credits!`);
+    userCreditsSpan.textContent=oldCredits+selectedPackage.credits;
+    selectedPackage=null;
+    document.querySelectorAll(".package").forEach(p=>p.classList.remove("selected"));
+  }catch(err){
+    showToast("❌ Error buying credits: "+err.message);
+  }
+});
+</script>
 </body>
 </html>
