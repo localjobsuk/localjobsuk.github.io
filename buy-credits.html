@@ -6,94 +6,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
 <style>
-#packs-container { display:flex; justify-content:center; flex-wrap:wrap; gap:20px; margin-top:20px; }
-.credit-pack { background:#fff; padding:20px; border-radius:8px; cursor:pointer; width:150px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:0.3s; }
-.credit-pack:hover { box-shadow:0 4px 12px rgba(0,0,0,0.15); transform:scale(1.05); }
-.pack-title { font-weight:bold; font-size:18px; margin-bottom:5px; }
-.pack-price { color:#203a43; font-size:16px; margin-bottom:10px; }
-.info-box { background:#eef3f7; padding:15px; border-radius:6px; max-width:500px; margin:20px auto; text-align:center; font-size:14px; color:#333; }
+  .info-box { max-width: 700px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  .credit-pack { display:inline-block; width:150px; padding:15px; margin:10px; background:#203a43; color:#fff; border-radius:8px; cursor:pointer; text-align:center; font-weight:bold; transition:0.3s; }
+  .credit-pack:hover { background:#0a7cff; }
+  .pack-title { font-size:1.2em; margin-bottom:5px; }
+  .pack-price { font-size:1em; }
+  h2 { text-align:center; margin-top:20px; }
 </style>
 </head>
 <body>
 
+<!-- Navbar -->
 <div id="navbar-container"></div>
 
-<h2 style="text-align:center;">Buy Credits</h2>
+<h2>Buy Credits</h2>
+
 <div class="info-box">
   <strong>Need More Credits?</strong>
-  <p>Select a pack below. Credits are updated instantly and never expire.</p>
+  <p>Select a credit pack below. Your balance updates instantly and never expires!</p>
 </div>
 
-<div id="packs-container">
-  <div class="credit-pack" data-amount="10">
+<div style="text-align:center; margin-top:20px;">
+  <div class="credit-pack" data-amount="10" data-price="£5">
     <div class="pack-title">10 Credits</div>
     <div class="pack-price">£5</div>
   </div>
-  <div class="credit-pack" data-amount="30">
+  <div class="credit-pack" data-amount="30" data-price="£12">
     <div class="pack-title">30 Credits</div>
     <div class="pack-price">£12</div>
   </div>
-  <div class="credit-pack" data-amount="100">
+  <div class="credit-pack" data-amount="100" data-price="£35">
     <div class="pack-title">100 Credits</div>
     <div class="pack-price">£35</div>
   </div>
 </div>
 
-<p style="text-align:center;">Your current credits: <span id="credits">0</span></p>
+<p style="text-align:center; margin-top:15px;">Your current credits: <span id="credits">0</span></p>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// Load navbar
+fetch("navbar.html")
+  .then(r => r.text())
+  .then(html => document.getElementById("navbar-container").innerHTML = html)
+  .then(() => import("./navbar.js")); // optional if you have navbar.js logic
 
 let currentUser = null;
+const creditsDisplay = document.getElementById("credits");
 
-// Navbar + logout
-document.addEventListener("DOMContentLoaded", async () => {
-  const navbarContainer = document.getElementById("navbar-container");
-  navbarContainer.innerHTML = await (await fetch("navbar.html")).text();
-
-  window.logout = async () => {
-    await signOut(auth);
-    window.location.href = "login.html";
-  };
-});
-
-// Auth check + display credits
+// Auth check
 onAuthStateChanged(auth, async user => {
   if (!user) window.location.href = "login.html";
   currentUser = user;
-  await updateCreditDisplay();
+  await loadUserCredits();
 });
 
-// Update credits display
-async function updateCreditDisplay() {
-  if(!currentUser) return;
-  const userDoc = await getDoc(doc(db,"users",currentUser.uid));
-  document.getElementById("credits").innerText = userDoc.data()?.credits || 0;
+async function loadUserCredits() {
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  if (userSnap.exists()) creditsDisplay.innerText = userSnap.data().credits || 0;
 }
 
-// Clickable credit packs
+// Handle clicking a credit pack
 document.querySelectorAll(".credit-pack").forEach(pack => {
   pack.addEventListener("click", async () => {
-    const amount = parseInt(pack.dataset.amount);
     if (!currentUser) return;
+    const amount = parseInt(pack.dataset.amount);
+    const price = pack.dataset.price;
 
-    const userRef = doc(db,"users",currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    const currentCredits = userSnap.data()?.credits || 0;
+    const confirmPurchase = confirm(`Do you want to buy ${amount} credits for ${price}?`);
+    if (!confirmPurchase) return;
 
-    await updateDoc(userRef, { credits: currentCredits + amount });
-    await updateCreditDisplay();
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, { credits: increment(amount) });
+      await loadUserCredits();
 
-    alert(`🎉 Thank you! You just bought ${amount} credits. Your new balance is ${currentCredits + amount}.`);
+      alert(`🎉 Thank you! You have successfully added ${amount} credits to your account.`);
+    } catch (err) {
+      alert("❌ Error adding credits: " + err.message);
+    }
   });
 });
+
+// Global logout function
+window.logout = async function() {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
 </script>
 
 </body>
