@@ -1,14 +1,11 @@
 // Hamburger toggle for mobile
 const hamburger = document.getElementById("hamburger");
 const navLinks = document.getElementById("navLinks");
-hamburger.addEventListener("click", () => {
-  navLinks.classList.toggle("show");
-});
+hamburger.addEventListener("click", () => navLinks.classList.toggle("show"));
 
-// Firebase auth for dynamic links
+// Firebase auth
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 const auth = getAuth();
-
 const userLinks = document.getElementById("userLinks");
 
 onAuthStateChanged(auth, user => {
@@ -18,9 +15,7 @@ onAuthStateChanged(auth, user => {
       <a href="#" onclick="logout()" class="btn" style="margin-left:10px;">Logout</a>
     `;
   } else {
-    userLinks.innerHTML = `
-      <a href="login.html" class="btn" style="margin-left:10px;">Login</a>
-    `;
+    userLinks.innerHTML = `<a href="login.html" class="btn" style="margin-left:10px;">Login</a>`;
   }
 });
 
