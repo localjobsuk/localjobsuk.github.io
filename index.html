@@ -3,23 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
-<meta name="description" content="Find verified local jobs posted by property owners and agencies. Unlock jobs instantly with credits. No commission. No middleman.">
-<meta name="keywords" content="local jobs UK, trades jobs UK, handyman jobs, plumbing jobs UK, property maintenance jobs, grass cutting jobs UK">
-<meta name="author" content="LocalJobsUK">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Open Graph -->
-<meta property="og:title" content="LocalJobsUK | Verified Trade Jobs">
-<meta property="og:description" content="Browse approved local jobs. Unlock contact details instantly.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://yourdomain.co.uk">
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<!-- Styles -->
 <link rel="stylesheet" href="style.css">
 <style>
   .hero { max-width: 800px; margin: 40px auto; text-align: center; }
@@ -34,10 +19,8 @@
 </head>
 <body>
 
-<!-- Navbar -->
 <div id="navbar-container"></div>
 
-<!-- Hero Section -->
 <section class="hero">
   <h1>Hire Local Workers. Fast.</h1>
   <p>LocalJobsUK connects people who need work done with trusted local workers. Post a job or find paid work in minutes.</p>
@@ -58,12 +41,13 @@
   </div>
 </section>
 
-<!-- Footer -->
 <footer>
   <p>© 2026 LocalJobsUK</p>
 </footer>
 
-<!-- Firebase Config -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -73,24 +57,17 @@ const firebaseConfig = {
   messagingSenderId: "YOUR_SENDER_ID",
   appId: "YOUR_APP_ID"
 };
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-</script>
-
-<!-- Load Navbar -->
-<script>
+// Load navbar
 document.addEventListener("DOMContentLoaded", () => {
-  fetch("navbar.html")
-    .then(response => response.text())
-    .then(data => {
-      document.getElementById("navbar-container").innerHTML = data;
-
-      const script = document.createElement("script");
-      script.src = "navbar.js";
-      document.body.appendChild(script);
-    });
+  fetch("navbar.html").then(r=>r.text()).then(html=>{
+    document.getElementById("navbar-container").innerHTML = html;
+    const script = document.createElement("script");
+    script.src = "navbar.js";
+    document.body.appendChild(script);
+  });
 });
 </script>
 
