@@ -3,75 +3,150 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verify Your Identity | LocalJobsUK</title>
+<title>Account Verification | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
+
 <style>
-body { font-family:'Inter', sans-serif; background:#f7f7f7; margin:0; padding:0; }
-.container { max-width:500px; margin:50px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-h2 { text-align:center; color:#203a43; margin-bottom:15px; }
-form { display:flex; flex-direction:column; gap:12px; }
-input, button { padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1em; }
-button { background:#203a43; color:#fff; border:none; font-weight:bold; cursor:pointer; transition:0.2s; }
-button:hover { background:#3498db; }
-.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#203a43; color:#fff; padding:12px 20px; border-radius:10px; display:none; z-index:1000; }
+:root{
+  --primary:#203a43;
+  --accent:#3498db;
+  --bg:#f4f6f8;
+}
+
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:var(--bg);
+}
+
+.verify-container{
+  max-width:600px;
+  margin:80px auto;
+  background:#fff;
+  padding:40px;
+  border-radius:12px;
+  box-shadow:0 4px 15px rgba(0,0,0,0.08);
+  text-align:center;
+}
+
+.verify-container h2{
+  margin-bottom:15px;
+  color:var(--primary);
+}
+
+.status-box{
+  padding:20px;
+  border-radius:8px;
+  margin-top:20px;
+  font-weight:bold;
+}
+
+.pending{
+  background:#fff3cd;
+  color:#856404;
+}
+
+.approved{
+  background:#d4edda;
+  color:#155724;
+}
+
+.btn{
+  margin-top:25px;
+  padding:12px 25px;
+  border:none;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.btn:hover{
+  background:var(--accent);
+}
+
+@media(max-width:600px){
+  .verify-container{margin:40px 15px;}
+}
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>Verify Your Identity</h2>
-  <p>Please upload a valid ID document to complete verification.</p>
-  <form id="verifyForm">
-    <input type="text" id="contactNumber" placeholder="Contact Number" required>
-    <input type="file" id="idUpload" accept="image/*,.pdf" required>
-    <button type="submit">Submit Verification</button>
-  </form>
-</div>
+<div id="navbar-container"></div>
 
-<div class="toast" id="toast"></div>
+<div class="verify-container">
+  <h2>Identity Verification</h2>
+  <p>To keep LocalJobsUK safe and trusted, we verify every account before allowing job posting.</p>
+
+  <div id="userInfo"></div>
+
+  <div id="statusBox" class="status-box pending">
+    ⏳ Your account is currently under review.
+  </div>
+
+  <button class="btn" id="refreshBtn">Check Status</button>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = { /* your config */ };
+const firebaseConfig = { /* YOUR CONFIG HERE */ };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-const form = document.getElementById("verifyForm");
-const toast = document.getElementById("toast");
-let currentUser=null;
+fetch("navbar.html")
+.then(r=>r.text())
+.then(html=>{
+  document.getElementById("navbar-container").innerHTML = html;
+})
+.then(()=>import("./navbar.js"));
 
-function showToast(msg){ toast.textContent=msg; toast.style.display="block"; setTimeout(()=>{toast.style.display="none";},3000); }
+const statusBox = document.getElementById("statusBox");
+const userInfo = document.getElementById("userInfo");
+const refreshBtn = document.getElementById("refreshBtn");
+
+async function checkVerification(user){
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists()) return;
+
+  const data = snap.data();
+
+  userInfo.innerHTML = `
+    <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+    <p><strong>Email:</strong> ${data.email}</p>
+  `;
+
+  if(data.verified === true){
+    statusBox.classList.remove("pending");
+    statusBox.classList.add("approved");
+    statusBox.innerHTML = "✅ Your account has been verified! Redirecting...";
+    setTimeout(()=>{
+      window.location.href = "index.html";
+    },2000);
+  }
+}
 
 onAuthStateChanged(auth,user=>{
-  if(!user) window.location.href="signup.html";
-  currentUser=user;
+  if(!user){
+    window.location.href="login.html";
+    return;
+  }
+  checkVerification(user);
 });
 
-form.addEventListener("submit", async e=>{
-  e.preventDefault();
-  const contactNumber = document.getElementById("contactNumber").value.trim();
-  const file = document.getElementById("idUpload").files[0];
-  if(!contactNumber || !file) return showToast("Please fill all fields and upload ID");
-
-  try{
-    const storageRef = ref(storage, `verificationIDs/${currentUser.uid}_${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef,file);
-    const idUrl = await getDownloadURL(storageRef);
-
-    await updateDoc(doc(db,"users",currentUser.uid),{
-      contactNumber, idUrl, verified:false
-    });
-
-    showToast("Verification submitted! Waiting for admin approval.");
-    setTimeout(()=>window.location.href="index.html",2000);
-  }catch(err){ showToast(err.message); }
+refreshBtn.addEventListener("click",()=>{
+  const user = auth.currentUser;
+  if(user){
+    checkVerification(user);
+  }
 });
 </script>
+
 </body>
 </html>
