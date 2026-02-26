@@ -2,26 +2,32 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Available Jobs | LocalJobsUK</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Available Jobs | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
+
 <style>
-body { font-family: Arial,sans-serif; background:#f4f6f8; margin:0; padding:0; }
-h2{text-align:center;margin-top:20px;}
-.job-card { background:#fff; padding:20px; margin:20px auto; max-width:900px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.1);}
-.job-card img.job-img { max-width:100%; margin:5px 0; border-radius:5px;}
-.category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px;}
-.new-badge { background:#e74c3c; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; margin-left:5px;}
-.blurred { filter: blur(5px); transition:filter 0.4s;}
-.blurred.revealed { filter: blur(0);}
-.info-box { background:#eef3f7; padding:10px 15px; border-radius:5px; margin-top:10px; font-size:14px; color:#333;}
-.unlock-btn { padding:10px 20px; background:#0a7cff; color:#fff; border:none; border-radius:5px; cursor:pointer; margin-top:10px;}
+body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:0; }
+nav { background-color:#2c3e50; color:#fff; padding:10px 15px; display:flex; justify-content:space-around; flex-wrap:wrap; }
+nav a { color:#fff; text-decoration:none; font-weight:bold; margin:5px; }
+h2 { text-align:center; margin-top:20px; }
+.job-card { background:#fff; padding:20px; margin:20px auto; max-width:900px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.1); }
+.job-card:hover { box-shadow:0 6px 12px rgba(0,0,0,0.15); transition:0.3s; }
+.job-card img.job-img { max-width:100%; margin:5px 0; border-radius:5px; }
+.category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; }
+.new-badge { background:#e74c3c; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; margin-left:5px; }
+.blurred { filter: blur(5px); transition:filter 0.4s; }
+.blurred.revealed { filter: blur(0); }
+.info-box { background:#eef3f7; padding:10px 15px; border-radius:5px; margin-top:10px; font-size:14px; color:#333; }
+.unlock-btn { padding:10px 20px; background:#0a7cff; color:#fff; border:none; border-radius:5px; cursor:pointer; margin-top:10px; transition:0.2s; }
 .unlock-btn:hover { background:#065ecf; }
 select { margin:10px; padding:5px; border-radius:5px; }
 </style>
 </head>
+
 <body>
 
+<!-- Navbar -->
 <div id="navbar-container"></div>
 
 <h2>Available Jobs</h2>
@@ -43,110 +49,133 @@ select { margin:10px; padding:5px; border-radius:5px; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
+// Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const functions = getFunctions(app);
-const unlockJobFn = httpsCallable(functions,"unlockJob");
 
 let currentUser = null;
-let jobsData = [];
+const creditsDisplay = document.getElementById("credits");
+const jobsContainer = document.getElementById("jobsContainer");
+const categoryFilter = document.getElementById("categoryFilter");
 
-document.addEventListener("DOMContentLoaded", async ()=>{
-  const navbarContainer = document.getElementById("navbar-container");
-  navbarContainer.innerHTML = await (await fetch("navbar.html")).text();
+// Load navbar
+fetch("navbar.html")
+  .then(r => r.text())
+  .then(html => document.getElementById("navbar-container").innerHTML = html)
+  .then(() => import("./navbar.js"));
 
-  window.logout = async ()=>{await signOut(auth); window.location.href="login.html";}
-});
-
-onAuthStateChanged(auth, async user=>{
-  if(!user) window.location.href="login.html";
+// Auth check
+onAuthStateChanged(auth, async user => {
+  if (!user) window.location.href = "login.html";
   currentUser = user;
-
-  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
-  document.getElementById("credits").innerText = userSnap.data().credits || 0;
-  loadJobs();
+  await loadUserCredits();
+  await loadJobs();
 });
 
-async function loadJobs(){
-  const jobsSnap = await getDocs(collection(db,"jobs"));
-  jobsData = jobsSnap.docs.map(d=>({id:d.id,...d.data()})).filter(j=>j.approved);
-  renderJobs();
+async function loadUserCredits() {
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  if (userSnap.exists()) creditsDisplay.innerText = userSnap.data().credits || 0;
 }
 
-function timeAgo(ts){
-  if(!ts) return "";
-  const diff = (Date.now() - ts.toDate().getTime())/1000;
-  if(diff<60) return `${Math.floor(diff)}s ago`;
-  if(diff<3600) return `${Math.floor(diff/60)}m ago`;
-  if(diff<86400) return `${Math.floor(diff/3600)}h ago`;
+function timeAgo(timestamp) {
+  if (!timestamp) return "";
+  const diff = (Date.now() - timestamp.toDate().getTime()) / 1000;
+  if (diff < 60) return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
 }
 
-function renderJobs(){
-  const selectedCategory = document.getElementById("categoryFilter").value;
-  const container = document.getElementById("jobsContainer");
-  container.innerHTML="";
-
-  jobsData.filter(j=>!selectedCategory || j.category===selectedCategory).forEach(job=>{
-    const div = document.createElement("div");
-    div.className="job-card";
-    const postedTime = timeAgo(job.createdAt);
-    const isNew=(Date.now()-job.createdAt?.toDate().getTime()||0)<86400000;
-    const phonePreview=job.contactPreview?.phone||"XXX-XXX";
-    const emailPreview=job.contactPreview?.email||"*****@***.com";
-
-    div.innerHTML=`
-      <h3>${job.title} <span class="category-badge">${job.category}</span> ${isNew?'<span class="new-badge">🔥 New</span>':''}</h3>
-      <p>${job.description}</p>
-      <p>📍 ${job.location||"N/A"} • 🕒 ${postedTime} • 👤 Verified Poster</p>
-      <div class="job-images">${job.images?.map(img=>`<img src="${img}" class="job-img">`).join("")||''}</div>
-      <p>💰 Credits to unlock: ${job.creditCost}</p>
-      <p>📞 Phone: <span class="blurred phone">${phonePreview}</span></p>
-      <p>📧 Email: <span class="blurred email">${emailPreview}</span></p>
-      <div class="info-box">
-        <p>✔ Automatic refund if no reply within 48h</p>
-        <p>✔ Refund if job removed</p>
-        <p>✔ Refund if poster inactive</p>
-      </div>
-      <button class="unlock-btn">Unlock Job (${job.creditCost} credits)</button>
-    `;
-    container.appendChild(div);
-
-    div.querySelector(".unlock-btn").addEventListener("click", async ()=>{
-      const btn=div.querySelector(".unlock-btn");
-      btn.disabled=true;
-      btn.innerText="Processing…";
-      try{
-        const res=await unlockJobFn({jobId:job.id});
-        if(res.data.success){
-          const userSnap = await getDoc(doc(db,"users",currentUser.uid));
-          document.getElementById("credits").innerText=userSnap.data().credits;
-          const metaDoc = await getDoc(doc(db,"jobs",job.id,"private","meta"));
-          if(metaDoc.exists()){
-            div.querySelector(".phone").innerText=metaDoc.data().fullPhone;
-            div.querySelector(".phone").classList.add("revealed");
-            div.querySelector(".email").innerText=metaDoc.data().fullEmail;
-            div.querySelector(".email").classList.add("revealed");
-          }
-          btn.innerText="✅ Job Unlocked!";
-          btn.style.backgroundColor="#2e7d32";
-        }
-      }catch(err){
-        alert(err.message);
-        btn.disabled=false;
-        btn.innerText=`Unlock Job (${job.creditCost} credits)`;
-      }
-    });
-  });
+// Load jobs
+async function loadJobs() {
+  const jobsSnap = await getDocs(collection(db, "jobs"));
+  const jobsData = jobsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(j => j.approved);
+  renderJobs(jobsData);
 }
 
-document.getElementById("categoryFilter").addEventListener("change", renderJobs);
+// Render jobs
+function renderJobs(jobs) {
+  const selectedCategory = categoryFilter.value;
+  jobsContainer.innerHTML = "";
+
+  jobs.filter(j => !selectedCategory || j.category === selectedCategory)
+    .forEach(job => {
+      const div = document.createElement("div");
+      div.className = "job-card";
+
+      const postedTime = timeAgo(job.createdAt);
+      const isNew = (Date.now() - job.createdAt?.toDate().getTime() || 0) < 86400000;
+      const phonePreview = job.contactPreview?.phone || "XXX-XXX";
+      const emailPreview = job.contactPreview?.email || "*****@***.com";
+
+      div.innerHTML = `
+        <h3>${job.title} <span class="category-badge">${job.category}</span> ${isNew ? '<span class="new-badge">🔥 New</span>' : ''}</h3>
+        <p>${job.description}</p>
+        <p>📍 ${job.location || "N/A"} • 🕒 ${postedTime} • 👤 Verified Poster</p>
+        <div class="job-images">${job.images?.map(img => `<img src="${img}" class="job-img">`).join("") || ''}</div>
+        <p>💰 Credits to unlock: ${job.creditCost}</p>
+        <p>📞 Phone: <span class="blurred phone">${phonePreview}</span></p>
+        <p>📧 Email: <span class="blurred email">${emailPreview}</span></p>
+        <div class="info-box">
+          <p>✔ Automatic refund if no reply within 48h</p>
+          <p>✔ Refund if job removed</p>
+          <p>✔ Refund if poster inactive</p>
+        </div>
+        <button class="unlock-btn">Unlock Job (${job.creditCost} credits)</button>
+      `;
+      jobsContainer.appendChild(div);
+
+      const unlockBtn = div.querySelector(".unlock-btn");
+      unlockBtn.addEventListener("click", async () => {
+        if (parseInt(creditsDisplay.innerText) < job.creditCost) {
+          alert("❌ Not enough credits. Please buy more.");
+          return;
+        }
+
+        unlockBtn.disabled = true;
+        unlockBtn.innerText = "Processing…";
+
+        try {
+          // Deduct credits
+          await updateDoc(doc(db, "users", currentUser.uid), { credits: increment(-job.creditCost) });
+          await loadUserCredits();
+
+          // Reveal full contact info
+          const phoneEl = div.querySelector(".phone");
+          const emailEl = div.querySelector(".email");
+
+          if (job.contactFull) {
+            phoneEl.innerText = job.contactFull.phone;
+            emailEl.innerText = job.contactFull.email;
+          }
+          phoneEl.classList.add("revealed");
+          emailEl.classList.add("revealed");
+
+          unlockBtn.innerText = "✅ Job Unlocked!";
+          unlockBtn.style.backgroundColor = "#2e7d32";
+          alert(`🎉 You have successfully unlocked "${job.title}"!`);
+        } catch (err) {
+          alert("❌ Error unlocking job: " + err.message);
+          unlockBtn.disabled = false;
+          unlockBtn.innerText = `Unlock Job (${job.creditCost} credits)`;
+        }
+      });
+    });
+}
+
+// Category filter
+categoryFilter.addEventListener("change", loadJobs);
+
+// Global logout
+window.logout = async function() {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
 </script>
 </body>
 </html>
