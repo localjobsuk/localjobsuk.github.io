@@ -1,25 +1,49 @@
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const auth = getAuth();
+
+const navLinks = document.getElementById("navLinks");
+const loginLink = document.getElementById("loginLink");
+const signupLink = document.getElementById("signupLink");
+const logoutLink = document.getElementById("logoutLink");
+const postJobLink = document.getElementById("postJobLink");
+
 // Hamburger toggle for mobile
 const hamburger = document.getElementById("hamburger");
-const navLinks = document.getElementById("navLinks");
-hamburger.addEventListener("click", () => navLinks.classList.toggle("show"));
+hamburger.addEventListener("click", () => {
+  navLinks.classList.toggle("show");
+});
 
-// Firebase auth
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-const auth = getAuth();
-const userLinks = document.getElementById("userLinks");
-
+// Check auth state
 onAuthStateChanged(auth, user => {
-  if(user){
-    userLinks.innerHTML = `
-      <span style="margin-left:10px;">Hi, ${user.displayName || 'User'}</span>
-      <a href="#" onclick="logout()" class="btn" style="margin-left:10px;">Logout</a>
-    `;
+  if (user) {
+    // User is logged in
+    loginLink.style.display = "none";
+    signupLink.style.display = "none";
+    logoutLink.style.display = "inline-block";
+    
+    // Only allow verified users to post jobs
+    if (user.emailVerified) { // optional extra check
+      postJobLink.href = "post-job.html";
+    } else {
+      postJobLink.href = "verify.html";
+    }
   } else {
-    userLinks.innerHTML = `<a href="login.html" class="btn" style="margin-left:10px;">Login</a>`;
+    // Not logged in
+    loginLink.style.display = "inline-block";
+    signupLink.style.display = "inline-block";
+    logoutLink.style.display = "none";
+    postJobLink.href = "signup.html";
   }
 });
 
-window.logout = async () => {
-  await signOut(auth);
-  window.location.href = "index.html";
-};
+// Logout function
+logoutLink.addEventListener("click", async (e) => {
+  e.preventDefault();
+  try {
+    await signOut(auth);
+    window.location.href = "index.html";
+  } catch (err) {
+    alert("Error logging out: " + err.message);
+  }
+});
