@@ -1,53 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post a Job | LocalJobsUK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { font-family:'Inter', sans-serif; background:#f7f7f7; margin:0; padding:0; }
+h2{text-align:center;color:#203a43;margin-top:20px;}
+form{max-width:600px;margin:20px auto;display:flex;flex-direction:column;gap:12px;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+input, textarea, select, button{padding:10px;border-radius:5px;border:1px solid #ccc;}
+button{background-color:#203a43;color:#fff;border:none;cursor:pointer;font-weight:bold;}
+button:hover{background-color:#0a5a7d;}
+.photos-preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+.photos-preview img{width:100px;height:100px;object-fit:cover;border-radius:5px;border:1px solid #ccc;}
+.add-photos-btn{background:#3498db;color:#fff;padding:10px;border-radius:5px;border:none;cursor:pointer;font-weight:bold;}
+.add-photos-btn:hover{background:#2980b9;}
+</style>
+</head>
+<body>
+
+<div id="navbar-container"></div>
+<h2>Post a Job</h2>
+
+<form id="jobForm">
+  <input type="text" id="title" placeholder="Job title" required>
+  <textarea id="description" placeholder="Job description" rows="5" required></textarea>
+  <input type="text" id="location" placeholder="Location">
+  <button type="button" class="add-photos-btn">+ Add Photos (up to 5)</button>
+  <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+  <div class="photos-preview" id="photosPreview"></div>
+
+  <label for="category">Category:</label>
+  <select id="category" required>
+    <option value="">Select category</option>
+    <option value="Gardening">Gardening</option>
+    <option value="Cleaning">Cleaning</option>
+    <option value="Delivery">Delivery</option>
+    <option value="IT">IT</option>
+    <option value="Other">Other</option>
+  </select>
+  <button type="submit">Submit Job</button>
+</form>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+const firebaseConfig={/* your config */};
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+const auth=getAuth(app);
+const storage=getStorage(app);
 
-let currentUser=null;
-let userData=null;
-let selectedFiles=[];
+let currentUser=null, userData=null, selectedFiles=[];
 
-// Navbar load
+// Load Navbar
 fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
 
 // Check auth & verification
-onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    // Not signed in → redirect to signup
-    window.location.href="signup.html";
-    return;
-  }
+onAuthStateChanged(auth, async user=>{
+  if(!user) window.location.href="signup.html";
   currentUser=user;
-
-  // Get user data
-  const docSnap = await getDoc(doc(db, "users", user.uid));
-  if(docSnap.exists()){
-    userData = docSnap.data();
-    if(!userData.verified){
-      // Signed in but not verified → redirect to verify page
-      alert("You must verify your account before posting a job.");
-      window.location.href="verify.html";
-      return;
-    }
-  } else {
-    // User record not found → redirect to signup
-    window.location.href="signup.html";
-    return;
-  }
+  const docSnap = await getDoc(doc(db,"users",user.uid));
+  if(docSnap.exists()) userData = docSnap.data();
+  if(!userData.verified) window.location.href="verify.html";
 });
 
-// --- PHOTO UPLOAD HANDLER ---
+// Photos
 const addPhotosBtn=document.querySelector(".add-photos-btn");
 const photoInput=document.getElementById("photoInput");
 const photosPreview=document.getElementById("photosPreview");
-
 addPhotosBtn.addEventListener("click",()=>photoInput.click());
 photoInput.addEventListener("change",()=>{
   selectedFiles=Array.from(photoInput.files).slice(0,5);
@@ -63,8 +88,8 @@ photoInput.addEventListener("change",()=>{
   });
 });
 
-// --- SUBMIT JOB ---
-document.getElementById("jobForm").addEventListener("submit",async e=>{
+// Submit Job
+document.getElementById("jobForm").addEventListener("submit", async e=>{
   e.preventDefault();
   if(!currentUser || !userData || !userData.verified) return;
 
@@ -82,15 +107,13 @@ document.getElementById("jobForm").addEventListener("submit",async e=>{
       const url=await getDownloadURL(storageRef);
       imageUrls.push(url);
     }
-
     await addDoc(collection(db,"jobs"),{
       title, description, location, category, images:imageUrls,
-      ownerId: currentUser.uid,
-      createdAt: serverTimestamp(),
-      approved:false, // admin sets
+      ownerId:currentUser.uid,
+      createdAt:serverTimestamp(),
+      approved:false,
       creditCost:0
     });
-
     alert("🎉 Job submitted successfully! Waiting for admin approval.");
     document.getElementById("jobForm").reset();
     photosPreview.innerHTML="";
@@ -98,3 +121,6 @@ document.getElementById("jobForm").addEventListener("submit",async e=>{
   }catch(err){ alert("❌ Error posting job: "+err.message); }
 });
 </script>
+
+</body>
+</html>
