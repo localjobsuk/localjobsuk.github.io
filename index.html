@@ -63,7 +63,7 @@
   <p>© 2026 LocalJobsUK</p>
 </footer>
 
-<!-- Firebase Config & Navbar Script -->
+<!-- Firebase Config -->
 <script>
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -73,41 +73,25 @@ const firebaseConfig = {
   messagingSenderId: "YOUR_SENDER_ID",
   appId: "YOUR_APP_ID"
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
 
-// Load navbar and attach auth links
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+</script>
+
+<!-- Load Navbar -->
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   fetch("navbar.html")
-    .then(r => r.text())
-    .then(html => document.getElementById("navbar-container").innerHTML = html)
-    .then(() => {
-      const s = document.createElement("script");
-      s.src = "navbar.js";
-      document.body.appendChild(s);
+    .then(response => response.text())
+    .then(data => {
+      document.getElementById("navbar-container").innerHTML = data;
 
-      // Auth links
-      const navLinks = document.getElementById("navLinks");
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          navLinks.innerHTML = `
-            <a href="owner-dashboard.html">My Jobs</a>
-            <a href="#" onclick="logout()">Logout</a>
-          `;
-        } else {
-          navLinks.innerHTML = `
-            <a href="login.html">Login</a>
-            <a href="post-job.html">Post a Job</a>
-          `;
-        }
-      });
+      const script = document.createElement("script");
+      script.src = "navbar.js";
+      document.body.appendChild(script);
     });
 });
-
-function logout() {
-  auth.signOut().then(() => window.location.href = "index.html");
-}
 </script>
 
 </body>
