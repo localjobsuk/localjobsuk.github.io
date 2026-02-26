@@ -73,7 +73,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
@@ -85,9 +84,12 @@ let userCredits = 0;
 let allJobs = [];
 
 // Navbar
-fetch("navbar.html").then(r=>r.text()).then(html=>{
-  document.getElementById("navbar-container").innerHTML = html;
-}).then(()=>import("./navbar.js"));
+document.addEventListener("DOMContentLoaded", async () => {
+  const navbarContainer = document.getElementById("navbar-container");
+  const response = await fetch("navbar.html");
+  navbarContainer.innerHTML = await response.text();
+  await import("./navbar.js");
+});
 
 // Toast helper
 function showToast(msg){
@@ -107,7 +109,7 @@ onAuthStateChanged(auth,user=>{
   loadJobs();
 });
 
-// Load jobs from Firestore
+// Load jobs
 async function loadJobs(){
   const q = query(collection(db,"jobs"), orderBy("createdAt","desc"));
   const snapshot = await getDocs(q);
@@ -143,11 +145,11 @@ function displayJobs(jobs){
     // Images
     if(job.images && job.images.length>0){
       const img = document.createElement("img");
-      img.src = job.images[0]; // Show first image
+      img.src = job.images[0];
       card.appendChild(img);
     }
 
-    // Contact info (blurred if locked)
+    // Contact info
     const contact = document.createElement("div");
     contact.classList.add("contact-blur");
     contact.textContent = job.contact || "Contact info hidden";
@@ -163,15 +165,11 @@ function displayJobs(jobs){
           document.getElementById("userCredits").textContent = userCredits;
           contact.classList.add("unlocked");
           showToast("✅ Contact unlocked!");
-          // TODO: Update credits in Firestore securely
-        } else {
-          showToast("❌ Not enough credits!");
-        }
+          // TODO: Update credits in Firestore
+        } else showToast("❌ Not enough credits!");
       };
       card.appendChild(btn);
-    } else {
-      contact.classList.add("unlocked"); // free job
-    }
+    } else contact.classList.add("unlocked");
 
     card.appendChild(title);
     card.appendChild(category);
@@ -181,7 +179,7 @@ function displayJobs(jobs){
   });
 }
 
-// Filters & sorting events
+// Filters & sorting
 document.getElementById("filterCategory").addEventListener("change", ()=>displayJobs(allJobs));
 document.getElementById("filterLocation").addEventListener("input", ()=>displayJobs(allJobs));
 document.getElementById("sortJobs").addEventListener("change", e=>{
