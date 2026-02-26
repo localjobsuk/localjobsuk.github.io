@@ -1,94 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard | LocalJobsUK</title>
-<link rel="stylesheet" href="styles.css">
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<link rel="stylesheet" href="style.css">
 
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-let currentUser = null;
-let jobsData = []; // store jobs for filtering
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) window.location.href = "login.html";
-  currentUser = user;
-
-  const token = await user.getIdTokenResult();
-  if (!token.claims.admin) {
-    alert("Access denied. Admins only.");
-    window.location.href = "index.html";
-  }
-
-  await loadAllJobs();
-});
-
-// Load all jobs from Firestore
-async function loadAllJobs() {
-  const snapshot = await getDocs(collection(db, "jobs"));
-  jobsData = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-  renderJobs();
-}
-
-// Render jobs with optional category filter
-function renderJobs() {
-  const selectedCategory = document.getElementById("categoryFilter").value;
-  const container = document.getElementById("allJobs");
-  container.innerHTML = "";
-
-  jobsData.filter(job => !selectedCategory || job.category === selectedCategory)
-    .forEach(job => {
-      const div = document.createElement("div");
-      div.className = "job";
-
-      div.innerHTML = `
-        <h3>${job.title} <span class="category-badge">${job.category || "Uncategorized"}</span></h3>
-        <p>${job.description}</p>
-        <p>📍 ${job.location || "N/A"} • 💰 Credits: ${job.creditCost || 0} • 🕒 Posted: ${job.createdAt?.toDate().toLocaleString() || "N/A"}</p>
-        <p>Owner ID: ${job.ownerId}</p>
-        <p>Status: ${job.approved ? "Approved ✅" : "Pending ⚠️"}</p>
-        <hr>
-      `;
-      container.appendChild(div);
-    });
-}
-
-// Filter change event
-document.addEventListener("DOMContentLoaded", () => {
-  const filterEl = document.getElementById("categoryFilter");
-  filterEl.addEventListener("change", renderJobs);
-});
-
-</script>
 <style>
-.job { border:1px solid #ccc; padding:15px; margin-bottom:20px; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-.category-badge { background:#3498db; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px; margin-left:6px; }
-#categoryFilter { padding:6px 10px; margin:10px 0; border-radius:4px; border:1px solid #ccc; }
+body{font-family:Arial;margin:0;background:#f4f6f8;}
+.container{max-width:1100px;margin:50px auto;padding:20px;}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  margin-bottom:20px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+input{padding:8px;border-radius:6px;border:1px solid #ccc;width:100px;}
+button{
+  padding:8px 14px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  font-weight:bold;
+}
+.approve{background:#27ae60;color:#fff;}
+.reject{background:#c0392b;color:#fff;}
 </style>
 </head>
 <body>
 
-<h2>Admin Dashboard — All Jobs</h2>
+<div class="container">
+<h2>Pending Job Approvals</h2>
+<div id="jobList">Loading...</div>
+</div>
 
-<label for="categoryFilter">Filter by Category:</label>
-<select id="categoryFilter">
-  <option value="">All Categories</option>
-  <option value="Gardening">Gardening</option>
-  <option value="Cleaning">Cleaning</option>
-  <option value="Delivery">Delivery</option>
-  <option value="IT">IT</option>
-  <option value="Other">Other</option>
-</select>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  deleteDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<div id="allJobs"></div>
+const firebaseConfig = { /* YOUR CONFIG */ };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+onAuthStateChanged(auth,user=>{
+  if(!user){window.location.href="login.html";}
+});
+
+async function loadJobs(){
+  const jobList=document.getElementById("jobList");
+  jobList.innerHTML="";
+  const snapshot = await getDocs(collection(db,"jobs"));
+
+  snapshot.forEach(docSnap=>{
+    const job=docSnap.data();
+    if(job.approved) return;
+
+    const card=document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <h3>${job.title}</h3>
+      <p><strong>Category:</strong> ${job.category}</p>
+      <p><strong>Location:</strong> ${job.location}</p>
+      <p>${job.description}</p>
+      <p><strong>Posted by:</strong> ${job.ownerName || "Unknown"}</p>
+      <label>Set Credit Cost:</label>
+      <input type="number" min="1" id="credit-${docSnap.id}">
+      <br><br>
+      <button class="approve">Approve</button>
+      <button class="reject">Reject</button>
+    `;
+
+    const approveBtn = card.querySelector(".approve");
+    const rejectBtn = card.querySelector(".reject");
+
+    approveBtn.onclick=async ()=>{
+      const cost=document.getElementById(`credit-${docSnap.id}`).value;
+      if(!cost || cost<=0){
+        alert("Set a valid credit cost.");
+        return;
+      }
+
+      await updateDoc(doc(db,"jobs",docSnap.id),{
+        approved:true,
+        creditCost:parseInt(cost)
+      });
+
+      alert("Job approved!");
+      loadJobs();
+    };
+
+    rejectBtn.onclick=async ()=>{
+      if(!confirm("Delete this job?")) return;
+      await deleteDoc(doc(db,"jobs",docSnap.id));
+      loadJobs();
+    };
+
+    document.getElementById("jobList").appendChild(card);
+  });
+}
+
+loadJobs();
+</script>
 
 </body>
 </html>
