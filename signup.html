@@ -45,14 +45,9 @@ const db = getFirestore(app);
 
 const form = document.getElementById("signupForm");
 const toast = document.getElementById("toast");
+function showToast(msg){ toast.textContent = msg; toast.style.display="block"; setTimeout(()=>{toast.style.display="none";},3000); }
 
-function showToast(msg){
-  toast.textContent = msg;
-  toast.style.display = "block";
-  setTimeout(()=>{ toast.style.display="none"; }, 3000);
-}
-
-form.addEventListener("submit", async (e)=>{
+form.addEventListener("submit", async e=>{
   e.preventDefault();
   const firstName = document.getElementById("firstName").value.trim();
   const lastName = document.getElementById("lastName").value.trim();
@@ -61,31 +56,21 @@ form.addEventListener("submit", async (e)=>{
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  if(!firstName || !lastName || !address || !contactNumber || !email || !password){
-    return showToast("Please fill all fields");
-  }
+  if(!firstName||!lastName||!address||!contactNumber||!email||!password) return showToast("Please fill all fields");
 
   try{
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth,email,password);
     const user = userCredential.user;
 
-    // Save user info in Firestore
-    await setDoc(doc(db, "users", user.uid), {
+    await setDoc(doc(db,"users",user.uid),{
       firstName, lastName, address, contactNumber,
-      verified: false,
-      role: "user",
-      idUrl: ""
+      verified:false, role:"user", idUrl:""
     });
 
-    // Update display name in Auth
-    await updateProfile(user, { displayName: firstName + " " + lastName });
-
+    await updateProfile(user,{displayName:firstName+" "+lastName});
     showToast("Account created! Redirecting to verification...");
-    setTimeout(()=>{ window.location.href = "verify.html"; }, 1500);
-
-  }catch(err){
-    showToast(err.message);
-  }
+    setTimeout(()=>window.location.href="verify.html",1500);
+  }catch(err){ showToast(err.message); }
 });
 </script>
 </body>
