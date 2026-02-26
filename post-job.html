@@ -2,51 +2,101 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Post a Job | LocalJobsUK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
+<style>
+body { margin:0; font-family: 'Inter', sans-serif; background:#f7f7f7; color:#333; }
+a { text-decoration:none; color:inherit; }
+button { cursor:pointer; }
+#navbar-container { z-index:1002; position:sticky; top:0; }
+
+/* Hero / Intro */
+.hero { max-width:800px; margin:40px auto; text-align:center; padding:0 20px; }
+.hero h1 { font-size:2.2em; margin-bottom:10px; }
+.hero p { font-size:1.1em; color:#555; margin-bottom:20px; }
+
+/* Form container */
+form { max-width:600px; margin:20px auto; background:#fff; padding:25px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:15px; }
+form label { font-weight:bold; }
+form input, form textarea, form select { width:100%; padding:12px; border-radius:8px; border:1px solid #ccc; font-size:1em; }
+form button { padding:12px; border-radius:8px; border:none; background:#203a43; color:#fff; font-weight:bold; transition:0.2s; }
+form button:hover { background:#3498db; }
+
+/* Photo upload */
+.photos-preview { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+.photos-preview img { width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid #ccc; }
+.add-photos-btn { background:#3498db; color:#fff; padding:10px; border-radius:8px; border:none; cursor:pointer; font-weight:bold; }
+.add-photos-btn:hover { background:#2980b9; }
+
+/* Step heading */
+.step-header { font-size:1.2em; font-weight:bold; margin-bottom:10px; color:var(--primary-color); }
+
+/* Loading spinner */
+#spinner { display:none; text-align:center; margin-top:10px; }
+
+/* Footer */
+footer { text-align:center; margin:40px 0 20px; color:#555; font-size:0.9em; }
+
+/* Responsive */
+@media(max-width:600px){ form { padding:15px; } .photos-preview img { width:80px; height:80px; } }
+</style>
 </head>
 <body>
+
 <div id="navbar-container"></div>
 
 <main>
-  <h2 style="text-align:center;">Post a Job</h2>
-  <form id="jobForm"> ... </form>
-</main>
-
-<script type="module"> ... </script>
-</body>
-
-<div id="navbar-container"></div>
-
-<h2 style="text-align:center;">Post a Job</h2>
+<section class="hero">
+  <h1>Find a Tradesperson</h1>
+  <p>Get FREE Quotes from up to 3 local tradespeople with our quick and easy connection platform. Compare quotes & save money on your job!</p>
+</section>
 
 <form id="jobForm">
-  <input type="text" id="title" placeholder="Job title" required>
-  <textarea id="description" placeholder="Job description" rows="5" required></textarea>
-  <input type="text" id="location" placeholder="Location">
-
-  <label for="category">Category:</label>
-  <select id="category" required>
-    <option value="">Select category</option>
-    <option value="Gardening">Gardening</option>
-    <option value="Cleaning">Cleaning</option>
-    <option value="Delivery">Delivery</option>
-    <option value="IT">IT</option>
-    <option value="Other">Other</option>
-  </select>
-
-  <div class="photos-dropzone" id="photosDropzone">
-    Drag & drop photos here or click to add (max 5)
+  <div class="step">
+    <div class="step-header">What type of work do you need doing?</div>
+    <select id="category" required>
+      <option value="">Select category</option>
+      <option value="Bathroom Fitting">Bathroom Fitting</option>
+      <option value="Building">Building</option>
+      <option value="Carpentry / Joinery">Carpentry / Joinery</option>
+      <option value="Cleaning">Cleaning</option>
+      <option value="Delivery">Delivery</option>
+      <option value="Electrics">Electrics</option>
+      <option value="Flooring">Flooring</option>
+      <option value="Gardening">Gardening</option>
+      <option value="Handywork">Handywork</option>
+      <option value="Heating / Gas Work">Heating / Gas Work</option>
+      <option value="Painting & Decorating">Painting & Decorating</option>
+      <option value="Plastering & Rendering">Plastering & Rendering</option>
+      <option value="Plumbing">Plumbing</option>
+      <option value="Roofing">Roofing</option>
+      <option value="Tiling">Tiling</option>
+      <option value="Other">Other</option>
+    </select>
   </div>
-  <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
-  <div class="photos-preview" id="photosPreview"></div>
 
-  <div class="spinner" id="spinner"></div>
-  <button type="submit" id="submitBtn">Submit Job</button>
+  <div class="step">
+    <div class="step-header">Tell us about your job</div>
+    <textarea id="description" placeholder="Please give a description of the job including materials needed, condition, etc." rows="5" required></textarea>
+    <small id="desc-count">Enter at least 25 more characters</small>
+  </div>
+
+  <div class="step">
+    <div class="step-header">Add Photos (optional, up to 5)</div>
+    <button type="button" class="add-photos-btn">+ Add Photos</button>
+    <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+    <div class="photos-preview" id="photosPreview"></div>
+  </div>
+
+  <div id="spinner">Uploading images, please wait...</div>
+
+  <button type="submit">Continue</button>
 </form>
 
-<div class="toast" id="toast"></div>
+<footer>
+  <p>© 2026 LocalJobsUK | Contact | Privacy | Terms & Conditions</p>
+</footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -62,76 +112,57 @@ const storage = getStorage(app);
 
 let currentUser=null, selectedFiles=[];
 
-// Navbar
-document.addEventListener("DOMContentLoaded", async () => {
-  const navbarContainer = document.getElementById("navbar-container");
-  const response = await fetch("navbar.html");
-  navbarContainer.innerHTML = await response.text();
-  await import("./navbar.js");
-});
+fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
 
-// Auth check
 onAuthStateChanged(auth,user=>{
   if(!user) window.location.href="login.html";
   currentUser=user;
 });
 
-// Toast helper
-function showToast(message){
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.style.display="block";
-  setTimeout(()=>{toast.style.display="none";}, 3000);
-}
+// Pre-fill category from URL query
+const urlParams = new URLSearchParams(window.location.search);
+const preCategory = urlParams.get('category');
+if(preCategory) document.getElementById("category").value = preCategory;
 
-// Drag & drop
-const dropzone = document.getElementById("photosDropzone");
-const photoInput = document.getElementById("photoInput");
-const photosPreview = document.getElementById("photosPreview");
+// Photo upload logic
+const addPhotosBtn=document.querySelector(".add-photos-btn");
+const photoInput=document.getElementById("photoInput");
+const photosPreview=document.getElementById("photosPreview");
+const spinner=document.getElementById("spinner");
 
-dropzone.addEventListener("click",()=>photoInput.click());
-dropzone.addEventListener("dragover", e=>{e.preventDefault(); dropzone.classList.add("dragover");});
-dropzone.addEventListener("dragleave", e=>dropzone.classList.remove("dragover"));
-dropzone.addEventListener("drop", e=>{ e.preventDefault(); dropzone.classList.remove("dragover"); handleFiles(Array.from(e.dataTransfer.files)); });
-photoInput.addEventListener("change",()=>handleFiles(Array.from(photoInput.files)));
-
-function handleFiles(files){
-  selectedFiles = selectedFiles.concat(files).slice(0,5);
+addPhotosBtn.addEventListener("click",()=>photoInput.click());
+photoInput.addEventListener("change",()=>{
+  selectedFiles=Array.from(photoInput.files).slice(0,5);
   photosPreview.innerHTML="";
-  selectedFiles.forEach((file,index)=>{
+  selectedFiles.forEach(file=>{
     const reader=new FileReader();
     reader.onload=e=>{
-      const wrapper=document.createElement("div");
-      wrapper.classList.add("photo-wrapper");
       const img=document.createElement("img");
       img.src=e.target.result;
-      const removeBtn=document.createElement("button");
-      removeBtn.textContent="×";
-      removeBtn.classList.add("remove-photo");
-      removeBtn.addEventListener("click",()=>{ selectedFiles.splice(index,1); wrapper.remove(); });
-      wrapper.appendChild(img);
-      wrapper.appendChild(removeBtn);
-      photosPreview.appendChild(wrapper);
+      photosPreview.appendChild(img);
     };
     reader.readAsDataURL(file);
   });
-}
+});
 
-// Submit
+// Description character check
+const descriptionInput = document.getElementById("description");
+const descCount = document.getElementById("desc-count");
+descriptionInput.addEventListener("input",()=>{
+  const len = descriptionInput.value.trim().length;
+  const remaining = 25 - len;
+  descCount.textContent = remaining > 0 ? `Enter at least ${remaining} more characters` : "Ready to submit!";
+});
+
+// Form submit
 document.getElementById("jobForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  if(!currentUser) return showToast("Please login first.");
-  const title=document.getElementById("title").value.trim();
-  const description=document.getElementById("description").value.trim();
-  const location=document.getElementById("location").value.trim();
-  const category=document.getElementById("category").value;
+  if(!currentUser) return alert("Please login first.");
+  const title = document.getElementById("category").value;
+  const description = descriptionInput.value.trim();
+  if(!title || !description || description.length<25) return alert("Please select category and write a description with at least 25 characters.");
 
-  if(title.length<5 || description.length<10) return showToast("Title ≥5 & description ≥10 chars");
-  if(!category) return showToast("Select a category");
-
-  const spinner=document.getElementById("spinner");
-  const submitBtn=document.getElementById("submitBtn");
-  spinner.style.display="block"; submitBtn.disabled=true;
+  spinner.style.display="block";
 
   try{
     const imageUrls=[];
@@ -141,19 +172,25 @@ document.getElementById("jobForm").addEventListener("submit", async e=>{
       const url=await getDownloadURL(storageRef);
       imageUrls.push(url);
     }
+
     await addDoc(collection(db,"jobs"),{
-      title,description,location,category,images:imageUrls,
-      ownerId:currentUser.uid,createdAt:serverTimestamp(),approved:false,creditCost:0
+      title, description, images:imageUrls, ownerId:currentUser.uid,
+      createdAt:serverTimestamp(), approved:false, creditCost:0
     });
-    showToast("🎉 Job submitted successfully! Admin will review shortly.");
+
+    alert("🎉 Job submitted successfully! It will be reviewed by admin shortly.");
     document.getElementById("jobForm").reset();
     photosPreview.innerHTML="";
     selectedFiles=[];
-  }catch(err){showToast("❌ Error posting job: "+err.message);}
-  finally{spinner.style.display="none"; submitBtn.disabled=false;}
+    spinner.style.display="none";
+
+  }catch(err){
+    spinner.style.display="none";
+    alert("❌ Error posting job: "+err.message);
+  }
 });
 
-window.logout=async()=>{await signOut(auth); window.location.href="index.html";}
+window.logout = async ()=>{await signOut(auth); window.location.href="index.html";}
 </script>
 </body>
 </html>
