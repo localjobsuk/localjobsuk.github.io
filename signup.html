@@ -6,48 +6,63 @@
 <title>Sign Up | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
 <style>
-body { font-family: 'Inter', sans-serif; background:#f7f7f7; margin:0; padding:0; }
-.container { max-width:500px; margin:50px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-h2 { text-align:center; color:#203a43; }
-form { display:flex; flex-direction:column; gap:12px; }
-input { padding:10px; border-radius:6px; border:1px solid #ccc; font-size:1em; }
-button { padding:12px; border:none; border-radius:8px; background:#203a43; color:#fff; font-weight:bold; cursor:pointer; transition:0.2s; }
-button:hover { background:#3498db; }
-.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#203a43; color:#fff; padding:12px 20px; border-radius:10px; display:none; z-index:1000; }
+/* --- Signup Page Styles --- */
+.signup-container {
+  max-width: 500px; margin:50px auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+.signup-container h2 { text-align:center; margin-bottom:25px; }
+.signup-container input, .signup-container button { width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc; font-size:1em; }
+.signup-container button { background:var(--primary-color); color:#fff; border:none; font-weight:bold; transition:0.2s; }
+.signup-container button:hover { background:var(--accent-color); }
+#idPreview { width:100px; height:100px; object-fit:cover; margin-bottom:10px; display:none; border-radius:8px; border:1px solid #ccc; }
 </style>
 </head>
 <body>
+<div id="navbar-container"></div>
 
-<div class="container">
-  <h2>Create an Account</h2>
+<div class="signup-container">
+  <h2>Create Your Account</h2>
   <form id="signupForm">
     <input type="text" id="firstName" placeholder="First Name" required>
     <input type="text" id="lastName" placeholder="Last Name" required>
     <input type="text" id="address" placeholder="Full Address" required>
-    <input type="text" id="contactNumber" placeholder="Contact Number" required>
+    <input type="tel" id="contactNumber" placeholder="Contact Number" required pattern="[0-9]{10,15}">
     <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
+    <input type="password" id="password" placeholder="Password" required minlength="6">
+    <label for="idUpload">Upload a form of ID (for verification)</label>
+    <input type="file" id="idUpload" accept="image/*,application/pdf" required>
+    <img id="idPreview">
     <button type="submit">Sign Up</button>
   </form>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const firebaseConfig = { /* your config */ };
+const firebaseConfig = {/* your config */};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-const form = document.getElementById("signupForm");
-const toast = document.getElementById("toast");
-function showToast(msg){ toast.textContent = msg; toast.style.display="block"; setTimeout(()=>{toast.style.display="none";},3000); }
+fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
 
-form.addEventListener("submit", async e=>{
+const signupForm = document.getElementById("signupForm");
+const idUpload = document.getElementById("idUpload");
+const idPreview = document.getElementById("idPreview");
+
+idUpload.addEventListener("change", () => {
+  const file = idUpload.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { idPreview.src = e.target.result; idPreview.style.display="block"; };
+  reader.readAsDataURL(file);
+});
+
+signupForm.addEventListener("submit", async e => {
   e.preventDefault();
   const firstName = document.getElementById("firstName").value.trim();
   const lastName = document.getElementById("lastName").value.trim();
@@ -56,21 +71,27 @@ form.addEventListener("submit", async e=>{
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  if(!firstName||!lastName||!address||!contactNumber||!email||!password) return showToast("Please fill all fields");
+  if (!idUpload.files[0]) return alert("Please upload your ID for verification.");
 
-  try{
-    const userCredential = await createUserWithEmailAndPassword(auth,email,password);
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    // Upload ID to storage
+    const storageRef = ref(storage, `userIDs/${user.uid}_${Date.now()}_${idUpload.files[0].name}`);
+    await uploadBytes(storageRef, idUpload.files[0]);
+    const idURL = await getDownloadURL(storageRef);
 
-    await setDoc(doc(db,"users",user.uid),{
-      firstName, lastName, address, contactNumber,
-      verified:false, role:"user", idUrl:""
+    // Save user data in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      firstName, lastName, address, contactNumber, email, idURL, verified: false, createdAt: new Date()
     });
 
-    await updateProfile(user,{displayName:firstName+" "+lastName});
-    showToast("Account created! Redirecting to verification...");
-    setTimeout(()=>window.location.href="verify.html",1500);
-  }catch(err){ showToast(err.message); }
+    alert("✅ Account created! Please wait for admin verification before posting jobs.");
+    window.location.href = "verify.html";
+
+  } catch (err) {
+    alert("❌ Error: "+err.message);
+  }
 });
 </script>
 </body>
