@@ -7,85 +7,74 @@
 <link rel="stylesheet" href="style.css">
 
 <style>
-:root{
-  --primary:#203a43;
-  --accent:#3498db;
-  --bg:#f4f6f8;
+.container {
+  max-width: 700px;
+  margin: 60px auto;
+  background: #fff;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:var(--bg);
+.container h1 {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
-.container{
-  max-width:700px;
-  margin:60px auto;
-  background:#fff;
-  padding:35px;
-  border-radius:12px;
-  box-shadow:0 4px 15px rgba(0,0,0,0.08);
+.form-group {
+  margin-bottom: 20px;
 }
 
-h2{text-align:center;margin-bottom:10px;}
-.step{margin-bottom:25px;}
-
-label{font-weight:bold;display:block;margin-bottom:8px;}
-select,textarea,input{
-  width:100%;
-  padding:12px;
-  border-radius:8px;
-  border:1px solid #ccc;
-  font-size:1em;
+.form-group label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
 }
 
-textarea{resize:vertical;min-height:120px;}
-
-.counter{
-  text-align:right;
-  font-size:0.9em;
-  color:#666;
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
 }
 
-.dropzone{
-  border:2px dashed #ccc;
-  padding:20px;
-  text-align:center;
-  border-radius:10px;
-  cursor:pointer;
-  background:#fafafa;
+textarea {
+  min-height: 120px;
+  resize: vertical;
 }
 
-.preview{
-  display:flex;
-  gap:10px;
-  margin-top:10px;
-  flex-wrap:wrap;
+button {
+  width: 100%;
+  padding: 15px;
+  border-radius: 8px;
+  border: none;
+  background: #203a43;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.3s;
 }
 
-.preview img{
-  width:100px;
-  height:100px;
-  object-fit:cover;
-  border-radius:8px;
-  border:1px solid #ccc;
+button:hover {
+  background: #3498db;
 }
 
-.btn{
-  width:100%;
-  padding:14px;
-  background:var(--primary);
-  color:#fff;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
-  cursor:pointer;
+.message {
+  margin-top: 15px;
+  text-align: center;
+  font-weight: 600;
 }
 
-.btn:hover{background:var(--accent);}
+.success { color: green; }
+.error { color: red; }
 
-.error{color:#c0392b;font-size:0.9em;}
+@media(max-width:768px){
+  .container { margin: 20px; padding: 25px; }
+}
 </style>
 </head>
 <body>
@@ -93,146 +82,123 @@ textarea{resize:vertical;min-height:120px;}
 <div id="navbar-container"></div>
 
 <div class="container">
-<h2>Tell us about your job</h2>
-<p style="text-align:center;color:#555;">
-Tradespeople will use this information to decide if they can help you.
-</p>
+  <h1>Post a Job</h1>
 
-<form id="jobForm">
+  <form id="jobForm">
+    <div class="form-group">
+      <label>Job Title</label>
+      <input type="text" id="title" required>
+    </div>
 
-<div class="step">
-<label>What type of work do you need?</label>
-<select id="category" required>
-<option value="">Select category</option>
-<option>Bathroom</option>
-<option>Building</option>
-<option>Carpentry</option>
-<option>Cleaning</option>
-<option>Electrical</option>
-<option>Flooring</option>
-<option>Gardening</option>
-<option>Heating / Gas</option>
-<option>Painting & Decorating</option>
-<option>Plumbing</option>
-<option>Roofing</option>
-<option>Other</option>
-</select>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="category" required>
+        <option value="">Select category</option>
+        <option>Bathroom Fitting</option>
+        <option>Building</option>
+        <option>Carpentry</option>
+        <option>Cleaning</option>
+        <option>Decorating</option>
+        <option>Electrical</option>
+        <option>Gardening</option>
+        <option>Plumbing</option>
+        <option>Roofing</option>
+        <option>Tiling</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="description" required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" id="location" placeholder="City or postcode" required>
+    </div>
+
+    <div class="form-group">
+      <label>Upload Images (optional)</label>
+      <input type="file" id="images" multiple accept="image/*">
+    </div>
+
+    <button type="submit">Submit Job</button>
+    <div id="formMessage" class="message"></div>
+  </form>
 </div>
 
-<div class="step">
-<label>Job title</label>
-<input type="text" id="title" required minlength="10">
-</div>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
-<div class="step">
-<label>Job description</label>
-<textarea id="description" required minlength="25"></textarea>
-<div class="counter"><span id="chars">0</span>/25 minimum</div>
-</div>
+<script>
+const firebaseConfig = { /* your config */ };
+firebase.initializeApp(firebaseConfig);
 
-<div class="step">
-<label>Job location</label>
-<input type="text" id="location" placeholder="City or postcode" required>
-</div>
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
 
-<div class="step">
-<label>Upload photos (optional – max 5)</label>
-<div class="dropzone" id="dropzone">Click or drag photos here</div>
-<input type="file" id="photos" multiple accept="image/*" hidden>
-<div class="preview" id="preview"></div>
-</div>
-
-<button class="btn" type="submit">Submit Job for Review</button>
-<p class="error" id="error"></p>
-
-</form>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
-const firebaseConfig = { /* YOUR CONFIG */ };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-fetch("navbar.html").then(r=>r.text()).then(html=>{
-  document.getElementById("navbar-container").innerHTML = html;
-}).then(()=>import("./navbar.js"));
-
-let user;
-let files=[];
-
-onAuthStateChanged(auth,async u=>{
-  if(!u){window.location.href="signup.html";return;}
-  const snap = await getDoc(doc(db,"users",u.uid));
-  if(!snap.data()?.verified){
-    window.location.href="verify.html";
-    return;
-  }
-  user=u;
+// Load navbar
+document.addEventListener("DOMContentLoaded",()=>{
+  fetch("navbar.html")
+    .then(r=>r.text())
+    .then(html=>document.getElementById("navbar-container").innerHTML=html)
+    .then(()=>import("./navbar.js"));
 });
 
-const desc=document.getElementById("description");
-const chars=document.getElementById("chars");
-desc.addEventListener("input",()=>chars.textContent=desc.value.length);
-
-const dropzone=document.getElementById("dropzone");
-const photos=document.getElementById("photos");
-const preview=document.getElementById("preview");
-
-dropzone.onclick=()=>photos.click();
-photos.onchange=()=>{
-  files=[...photos.files].slice(0,5);
-  preview.innerHTML="";
-  files.forEach(f=>{
-    const img=document.createElement("img");
-    img.src=URL.createObjectURL(f);
-    preview.appendChild(img);
-  });
-};
-
-document.getElementById("jobForm").onsubmit=async e=>{
-  e.preventDefault();
-  const error=document.getElementById("error");
-  error.textContent="";
-
-  if(desc.value.length<25){
-    error.textContent="Description must be at least 25 characters.";
-    return;
+// Redirect if not logged in
+auth.onAuthStateChanged(user=>{
+  if(!user){
+    window.location.href="signup.html";
   }
+});
 
-  try{
-    const urls=[];
-    for(const f of files){
-      const r=ref(storage,`jobs/${user.uid}/${Date.now()}_${f.name}`);
-      await uploadBytes(r,f);
-      urls.push(await getDownloadURL(r));
+// Submit form
+document.getElementById("jobForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const message = document.getElementById("formMessage");
+  message.textContent = "Submitting...";
+  message.className="message";
+
+  try {
+    const user = auth.currentUser;
+    const files = document.getElementById("images").files;
+    let imageUrls = [];
+
+    // Upload images
+    for (let file of files) {
+      const ref = storage.ref().child("job-images/" + Date.now() + "-" + file.name);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      imageUrls.push(url);
     }
 
-    await addDoc(collection(db,"jobs"),{
-      title:title.value,
-      description:desc.value,
-      category:category.value,
-      location:location.value,
-      images:urls,
-      ownerId:user.uid,
-      approved:false,
-      creditCost:0,
-      createdAt:serverTimestamp()
+    // Save job
+    await db.collection("jobs").add({
+      title: document.getElementById("title").value,
+      category: document.getElementById("category").value,
+      description: document.getElementById("description").value,
+      location: document.getElementById("location").value,
+      images: imageUrls,
+      userId: user.uid,
+      userEmail: user.email,
+      approved: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    alert("✅ Job submitted! It will go live once approved.");
-    window.location.href="index.html";
+    message.textContent = "Job submitted successfully! Awaiting approval.";
+    message.className="message success";
+    document.getElementById("jobForm").reset();
 
-  }catch(err){
-    error.textContent=err.message;
+  } catch (err) {
+    message.textContent = "Error: " + err.message;
+    message.className="message error";
   }
-};
+});
 </script>
 
 </body>
