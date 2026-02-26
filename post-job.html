@@ -6,25 +6,32 @@
 <title>Post a Job | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
 <style>
-form { max-width: 500px; margin: 20px auto; display: flex; flex-direction: column; gap: 10px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-input, textarea, select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
-button { background-color: #455a64; color: #fff; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
-#addPhotos { cursor:pointer; color:#203a43; text-decoration:underline; font-weight:bold; }
+  form { max-width: 500px; margin: 20px auto; display: flex; flex-direction: column; gap: 10px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  input, textarea, select, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+  button { background-color: #203a43; color: #fff; border: none; cursor: pointer; font-weight: bold; }
+  #photoInputs { display: flex; flex-direction: column; gap: 5px; }
+  #photoInputs input { border: 1px solid #aaa; }
 </style>
 </head>
 <body>
 
+<!-- Navbar -->
 <div id="navbar-container"></div>
 
-<h2>Post a Job</h2>
+<h2 style="text-align:center; margin-top:20px;">Post a Job</h2>
+
 <form id="jobForm">
   <input type="text" id="title" placeholder="Job title" required>
   <textarea id="description" placeholder="Job description" rows="5" required></textarea>
   <input type="text" id="location" placeholder="Location">
   
-  <div id="photos-container">
-    <p id="addPhotos">+ Add up to 5 photos</p>
-    <div id="photoInputs"></div>
+  <label>Add Photos (up to 5):</label>
+  <div id="photoInputs">
+    <input type="text" placeholder="Photo URL 1">
+    <input type="text" placeholder="Photo URL 2">
+    <input type="text" placeholder="Photo URL 3">
+    <input type="text" placeholder="Photo URL 4">
+    <input type="text" placeholder="Photo URL 5">
   </div>
 
   <label for="category">Category:</label>
@@ -36,6 +43,7 @@ button { background-color: #455a64; color: #fff; border: none; padding: 10px; bo
     <option value="IT">IT</option>
     <option value="Other">Other</option>
   </select>
+
   <button type="submit">Submit Job</button>
 </form>
 
@@ -44,62 +52,60 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
 let currentUser = null;
+
+// Load navbar
+fetch("navbar.html").then(r => r.text()).then(html => document.getElementById("navbar-container").innerHTML = html)
+  .then(() => import("./navbar.js")); // optional if navbar.js logic exists
+
+// Auth check
 onAuthStateChanged(auth, user => {
   if (!user) window.location.href = "login.html";
-  else currentUser = user;
+  currentUser = user;
 });
 
-// navbar
-document.addEventListener("DOMContentLoaded", async () => {
-  const navbarContainer = document.getElementById("navbar-container");
-  navbarContainer.innerHTML = await (await fetch("navbar.html")).text();
-
-  window.logout = async function() {
-    await auth.signOut();
-    window.location.href = "login.html";
-  };
-});
-
-// photo inputs
-let photoCount = 0;
-document.getElementById("addPhotos").addEventListener("click", () => {
-  if(photoCount >= 5) return alert("Max 5 photos reached");
-  photoCount++;
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = `Photo URL ${photoCount}`;
-  input.className = "photoInput";
-  document.getElementById("photoInputs").appendChild(input);
-});
-
-// submit job
-document.getElementById("jobForm").addEventListener("submit", async e => {
+// Submit job
+document.getElementById("jobForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const title = document.getElementById("title").value.trim();
   const description = document.getElementById("description").value.trim();
   const location = document.getElementById("location").value.trim();
   const category = document.getElementById("category").value;
-  const images = Array.from(document.getElementsByClassName("photoInput")).map(i=>i.value.trim()).filter(Boolean);
 
-  if(!title || !description || !category) return alert("Please fill required fields");
+  const photoInputs = Array.from(document.querySelectorAll("#photoInputs input"));
+  const photos = photoInputs.map(i => i.value.trim()).filter(u => u);
+
+  if (!title || !description || !category) {
+    alert("Title, description, and category are required.");
+    return;
+  }
 
   try {
     await addDoc(collection(db, "jobs"), {
-      title, description, location, category, images, ownerId: currentUser.uid,
-      approved:false, creditCost:0, createdAt:serverTimestamp()
+      title,
+      description,
+      location,
+      category,
+      photos,
+      ownerId: currentUser.uid,
+      createdAt: serverTimestamp(),
+      approved: false,
+      creditCost: 0
     });
-    alert("✅ Job successfully added! It will be reviewed by admin.");
+
+    // Success message
+    alert("✅ Job submitted successfully! It will be reviewed by admin before going live.");
     document.getElementById("jobForm").reset();
-    document.getElementById("photoInputs").innerHTML = "";
-    photoCount = 0;
-  } catch(err) {
-    alert("Error: "+err.message);
+
+  } catch (err) {
+    alert("❌ Error submitting job: " + err.message);
   }
 });
 </script>
