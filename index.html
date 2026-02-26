@@ -5,6 +5,52 @@
 <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
+<style>
+/* Modal styling */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.modal-content button {
+  margin: 10px 5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.modal-content button:hover { background: var(--accent-color); }
+.close-modal {
+  margin-top: 15px;
+  background: #ccc;
+  color: #333;
+}
+.close-modal:hover { background: #aaa; }
+
+/* Ensure navbar is always on top */
+.navbar { z-index: 1002; }
+
+/* Main content top spacing */
+main { margin-top: 60px; }
+</style>
 </head>
 <body>
 
@@ -35,14 +81,73 @@
   </footer>
 </main>
 
+<!-- Landing Modal -->
+<div id="welcomeModal" class="modal">
+  <div class="modal-content" id="modalContent">
+    <h2>Just checking...</h2>
+    <p>Are you looking to get a price for a job you need doing? Or are you a tradesperson looking for more work?</p>
+    <button id="homeownerBtn">I need a job doing</button>
+    <button id="tradesBtn">I'm a tradesperson</button>
+    <button class="close-modal" id="skipModal">Skip</button>
+  </div>
+</div>
+
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
+  // Load navbar
   const navbarContainer = document.getElementById("navbar-container");
   const response = await fetch("navbar.html");
   navbarContainer.innerHTML = await response.text();
   await import("./navbar.js");
+
+  // Modal logic
+  const modal = document.getElementById("welcomeModal");
+  const modalContent = document.getElementById("modalContent");
+  const skipBtn = document.getElementById("skipModal");
+
+  skipBtn.addEventListener("click", ()=>{ modal.style.display = "none"; });
+
+  document.getElementById("homeownerBtn").addEventListener("click", ()=>{
+    modalContent.innerHTML = `
+      <h2>What type of work do you need doing?</h2>
+      <button class="jobCat" data-category="Bathroom Fitting">Bathroom Fitting</button>
+      <button class="jobCat" data-category="Building">Building</button>
+      <button class="jobCat" data-category="Carpentry / Joinery">Carpentry / Joinery</button>
+      <button class="jobCat" data-category="Cleaning">Cleaning</button>
+      <button class="jobCat" data-category="Electrics">Electrics</button>
+      <button class="jobCat" data-category="Flooring">Flooring</button>
+      <button class="jobCat" data-category="Gardening & Landscaping">Gardening & Landscaping</button>
+      <button class="jobCat" data-category="Handywork">Handywork</button>
+      <button class="jobCat" data-category="Heating / Gas Work">Heating / Gas Work</button>
+      <button class="jobCat" data-category="Painting & Decorating">Painting & Decorating</button>
+      <button class="jobCat" data-category="Plastering & Rendering">Plastering & Rendering</button>
+      <button class="jobCat" data-category="Plumbing">Plumbing</button>
+      <button class="jobCat" data-category="Roofing">Roofing</button>
+      <button class="jobCat" data-category="Tiling">Tiling</button>
+      <button class="jobCat" data-category="Other">Other</button>
+      <button class="close-modal" id="backBtn">Back</button>
+    `;
+
+    // Category click
+    modalContent.querySelectorAll(".jobCat").forEach(btn=>{
+      btn.addEventListener("click", ()=> {
+        const cat = btn.getAttribute("data-category");
+        // Redirect to post-job.html with category as query param
+        window.location.href = `post-job.html?category=${encodeURIComponent(cat)}`;
+      });
+    });
+
+    // Back button
+    document.getElementById("backBtn").addEventListener("click", ()=>{
+      location.reload(); // reload modal to first step
+    });
+  });
+
+  document.getElementById("tradesBtn").addEventListener("click", ()=>{
+    // Redirect tradesperson to worker page
+    window.location.href = "worker.html";
+  });
 });
 </script>
-
 </body>
 </html>
