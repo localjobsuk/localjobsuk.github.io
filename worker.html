@@ -47,86 +47,95 @@ select { margin:10px; padding:5px; border-radius:5px; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const functions = getFunctions(app);
-const unlockJobFn = httpsCallable(functions, "unlockJob");
 
-// Make logout global
-window.logout = async function() {
-  await signOut(auth);
-  window.location.href = "index.html";
-};
+let currentUser = null;
+let jobsData = [];
 
-// Load navbar
+// ---- Load Navbar ----
 document.addEventListener("DOMContentLoaded", async () => {
   const navbarHtml = await fetch("navbar.html").then(r => r.text());
   document.getElementById("navbar-container").innerHTML = navbarHtml;
+
   const navScript = document.createElement("script");
   navScript.src = "navbar.js";
   document.body.appendChild(navScript);
 
-  // Auth links
   const navLinks = document.getElementById("navLinks");
   onAuthStateChanged(auth, user => {
-    if (!user) return window.location.href = "login.html";
-    navLinks.innerHTML = `
-      <a href="owner-dashboard.html">My Jobs</a>
-      <a href="#" onclick="logout()">Logout</a>
-    `;
+    if(!user) window.location.href = "login.html";
+    if(user){
+      navLinks.innerHTML = `
+        <a href="owner-dashboard.html">My Jobs</a>
+        <a href="buy-credits.html">Buy Credits</a>
+        <a href="#" onclick="logout()">Logout</a>
+      `;
+    }
   });
-
-  // Load user credits
-  const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-  if (userSnap.exists()) document.getElementById("credits").innerText = userSnap.data().credits || 0;
-
-  // Load jobs
-  loadJobs();
 });
 
-let jobsData = [];
-
-function timeAgo(timestamp) {
-  if (!timestamp) return "";
-  const diff = (Date.now() - timestamp.toDate().getTime()) / 1000;
-  if (diff < 60) return `${Math.floor(diff)}s ago`;
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-  return `${Math.floor(diff/86400)}d ago`;
+// ---- Logout ----
+window.logout = async function() {
+  await signOut(auth);
+  window.location.href = "index.html";
 }
 
+// ---- Auth + Load Jobs ----
+onAuthStateChanged(auth, async user => {
+  if(!user) window.location.href="login.html";
+  currentUser = user;
+
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  document.getElementById("credits").innerText = userSnap.data()?.credits || 0;
+
+  await loadJobs();
+});
+
+// ---- Load Jobs ----
 async function loadJobs() {
-  const jobsSnap = await getDocs(collection(db, "jobs"));
-  jobsData = jobsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })).filter(j => j.approved);
+  const jobsSnap = await getDocs(collection(db,"jobs"));
+  jobsData = jobsSnap.docs.map(d=>({id:d.id,...d.data()})).filter(j=>j.approved);
   renderJobs();
 }
 
+// ---- Helper: time ago ----
+function timeAgo(timestamp) {
+  if(!timestamp) return "";
+  const diff = (Date.now() - timestamp.toDate().getTime())/1000;
+  if(diff<60) return `${Math.floor(diff)}s ago`;
+  if(diff<3600) return `${Math.floor(diff/60)}m ago`;
+  if(diff<86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+// ---- Render Jobs ----
 function renderJobs() {
   const selectedCategory = document.getElementById("categoryFilter").value;
-  const container = document.getElementById("jobsContainer");
-  container.innerHTML = "";
+  const jobsContainer = document.getElementById("jobsContainer");
+  jobsContainer.innerHTML = "";
 
-  jobsData.filter(j => !selectedCategory || j.category === selectedCategory)
+  jobsData.filter(j => !selectedCategory || j.category===selectedCategory)
     .forEach(job => {
       const div = document.createElement("div");
-      div.className = "job-card";
+      div.className="job-card";
+
       const postedTime = timeAgo(job.createdAt);
-      const isNew = (Date.now() - job.createdAt?.toDate().getTime() || 0) < 86400000;
+      const isNew = (Date.now() - job.createdAt?.toDate()?.getTime() || 0)<86400000;
       const phonePreview = job.contactPreview?.phone || "XXX-XXX";
       const emailPreview = job.contactPreview?.email || "*****@***.com";
 
       div.innerHTML = `
-        <h3>${job.title} <span class="category-badge">${job.category}</span> ${isNew ? '<span class="new-badge">🔥 New</span>' : ''}</h3>
+        <h3>${job.title} <span class="category-badge">${job.category}</span> ${isNew?'<span class="new-badge">🔥 New</span>':''}</h3>
         <p>${job.description}</p>
         <p>📍 ${job.location || "N/A"} • 🕒 ${postedTime} • 👤 Verified Poster</p>
-        <div class="job-images">${job.images?.map(img => `<img src="${img}" class="job-img">`).join("") || ''}</div>
+        <div class="job-images">${job.images?.map(img=>`<img src="${img}" class="job-img">`).join("") || ""}</div>
         <p>💰 Credits to unlock: ${job.creditCost}</p>
         <p>📞 Phone: <span class="blurred phone">${phonePreview}</span></p>
         <p>📧 Email: <span class="blurred email">${emailPreview}</span></p>
@@ -137,37 +146,53 @@ function renderJobs() {
         </div>
         <button class="unlock-btn">Unlock Job (${job.creditCost} credits)</button>
       `;
-      container.appendChild(div);
+      jobsContainer.appendChild(div);
 
-      const unlockBtn = div.querySelector(".unlock-btn");
-      unlockBtn.addEventListener("click", async () => {
-        unlockBtn.disabled = true;
-        unlockBtn.innerText = "Processing…";
+      div.querySelector(".unlock-btn").addEventListener("click", async ()=>{
+        const btn = div.querySelector(".unlock-btn");
+        btn.disabled=true;
+        btn.innerText="Processing…";
+
         try {
-          const result = await unlockJobFn({ jobId: job.id });
-          if (result.data.success) {
-            const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-            document.getElementById("credits").innerText = userSnap.data().credits;
-            const metaDoc = await getDoc(doc(db, "jobs", job.id, "private", "meta"));
-            if (metaDoc.exists()) {
-              div.querySelector(".phone").innerText = metaDoc.data().fullPhone;
-              div.querySelector(".phone").classList.add("revealed");
-              div.querySelector(".email").innerText = metaDoc.data().fullEmail;
-              div.querySelector(".email").classList.add("revealed");
-            }
-            unlockBtn.innerText = "✅ Job Unlocked";
-            unlockBtn.style.backgroundColor = "#2e7d32";
+          const userRef = doc(db,"users",currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          const currentCredits = userSnap.data()?.credits || 0;
+
+          if(currentCredits<job.creditCost) {
+            alert("Not enough credits!");
+            btn.disabled=false;
+            btn.innerText=`Unlock Job (${job.creditCost} credits)`;
+            return;
           }
-        } catch (err) {
+
+          await updateDoc(userRef,{credits:increment(-job.creditCost)});
+          document.getElementById("credits").innerText = currentCredits - job.creditCost;
+
+          // Reveal full contact
+          const phoneEl = div.querySelector(".phone");
+          phoneEl.innerText = job.ownerPhone || "N/A";
+          phoneEl.classList.add("revealed");
+
+          const emailEl = div.querySelector(".email");
+          emailEl.innerText = job.ownerEmail || "N/A";
+          emailEl.classList.add("revealed");
+
+          btn.innerText="✅ Job Unlocked";
+          btn.style.backgroundColor="#2e7d32";
+          btn.disabled=true;
+
+        } catch(err) {
           alert(err.message);
-          unlockBtn.disabled = false;
-          unlockBtn.innerText = `Unlock Job (${job.creditCost} credits)`;
+          btn.disabled=false;
+          btn.innerText=`Unlock Job (${job.creditCost} credits)`;
         }
       });
+
     });
 }
 
-document.getElementById("categoryFilter").addEventListener("change", renderJobs);
+// ---- Category filter ----
+document.getElementById("categoryFilter").addEventListener("change",renderJobs);
 
 </script>
 </body>
