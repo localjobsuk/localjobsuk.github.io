@@ -2,23 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Help & Support | LocalJobsUK</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<title>Help & Support | LocalJobsUK</title>
 
 <link rel="stylesheet" href="style.css">
+
+<!-- Firebase Compat (MUST BE HERE) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 
 <body>
 
-<!-- Navbar -->
+<!-- NAVBAR CONTAINER (MUST EXIST) -->
 <div id="navbar-container"></div>
 
-<!-- Page Content -->
-<section style="max-width:800px;margin:40px auto;">
+<div style="max-width:800px;margin:40px auto;">
 
 <h2>Help & Support</h2>
 
@@ -55,10 +54,10 @@
 </ul>
 
 <h3>Contact Us</h3>
-<p>If you have questions, please email: support@localjobsuk.com</p>
+<p>If you have questions, email: support@localjobsuk.com</p>
 <p>We aim to respond within 24 hours.</p>
 
-</section>
+</div>
 
 <!-- Firebase Config -->
 <script>
@@ -76,17 +75,19 @@ if (!firebase.apps.length) {
 }
 </script>
 
-<!-- Load Navbar -->
+<!-- LOAD NAVBAR AFTER FIREBASE -->
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", function () {
   fetch("navbar.html")
-    .then(res => res.text())
+    .then(response => response.text())
     .then(data => {
       document.getElementById("navbar-container").innerHTML = data;
+
       const script = document.createElement("script");
       script.src = "navbar.js";
       document.body.appendChild(script);
-    });
+    })
+    .catch(error => console.error("Navbar failed to load:", error));
 });
 </script>
 
