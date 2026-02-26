@@ -20,7 +20,7 @@ button:hover { background:#3498db; }
 
 <div class="container">
   <h2>Verify Your Identity</h2>
-  <p>Please upload a valid ID document and confirm your contact number to complete verification.</p>
+  <p>Please upload a valid ID document to complete verification.</p>
   <form id="verifyForm">
     <input type="text" id="contactNumber" placeholder="Contact Number" required>
     <input type="file" id="idUpload" accept="image/*,.pdf" required>
@@ -33,7 +33,7 @@ button:hover { background:#3498db; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 const firebaseConfig = { /* your config */ };
@@ -46,40 +46,30 @@ const form = document.getElementById("verifyForm");
 const toast = document.getElementById("toast");
 let currentUser=null;
 
-function showToast(msg){
-  toast.textContent = msg;
-  toast.style.display = "block";
-  setTimeout(()=>{ toast.style.display="none"; }, 3000);
-}
+function showToast(msg){ toast.textContent=msg; toast.style.display="block"; setTimeout(()=>{toast.style.display="none";},3000); }
 
-// Ensure user is logged in
-onAuthStateChanged(auth, user=>{
-  if(!user) window.location.href="login.html";
+onAuthStateChanged(auth,user=>{
+  if(!user) window.location.href="signup.html";
   currentUser=user;
 });
 
-form.addEventListener("submit", async (e)=>{
+form.addEventListener("submit", async e=>{
   e.preventDefault();
   const contactNumber = document.getElementById("contactNumber").value.trim();
   const file = document.getElementById("idUpload").files[0];
-  if(!contactNumber || !file) return showToast("Please fill all fields and upload your ID");
+  if(!contactNumber || !file) return showToast("Please fill all fields and upload ID");
 
   try{
-    // Upload ID to Storage
     const storageRef = ref(storage, `verificationIDs/${currentUser.uid}_${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef,file);
     const idUrl = await getDownloadURL(storageRef);
 
-    // Update user in Firestore
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      contactNumber,
-      idUrl,
-      verified: false // Admin will approve
+    await updateDoc(doc(db,"users",currentUser.uid),{
+      contactNumber, idUrl, verified:false
     });
 
     showToast("Verification submitted! Waiting for admin approval.");
-    setTimeout(()=>{ window.location.href="index.html"; }, 2000);
-
+    setTimeout(()=>window.location.href="index.html",2000);
   }catch(err){ showToast(err.message); }
 });
 </script>
