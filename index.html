@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link rel="stylesheet" href="style.css">
 <style>
   .hero { max-width: 800px; margin: 40px auto; text-align: center; }
@@ -45,28 +44,40 @@
   <p>© 2026 LocalJobsUK</p>
 </footer>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Load navbar
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("navbar.html").then(r=>r.text()).then(html=>{
-    document.getElementById("navbar-container").innerHTML = html;
-    const script = document.createElement("script");
-    script.src = "navbar.js";
-    document.body.appendChild(script);
+const firebaseConfig = { /* your config */ };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const navbarContainer = document.getElementById("navbar-container");
+  navbarContainer.innerHTML = await (await fetch("navbar.html")).text();
+
+  // make logout globally accessible
+  window.logout = async function() {
+    await signOut(auth);
+    window.location.href = "login.html";
+  };
+
+  // update navbar links based on auth
+  const navLinks = document.getElementById("navLinks");
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      navLinks.innerHTML = `
+        <a href="owner-dashboard.html">My Jobs</a>
+        <a href="#" onclick="logout()">Logout</a>
+      `;
+    } else {
+      navLinks.innerHTML = `
+        <a href="login.html">Login</a>
+        <a href="post-job.html">Post a Job</a>
+      `;
+    }
   });
 });
 </script>
