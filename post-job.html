@@ -5,21 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Post a Job | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
-
-<style>
-form { max-width: 600px; margin: 20px auto; display: flex; flex-direction: column; gap: 12px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-input, textarea, select, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-button { background-color: #203a43; color: #fff; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-button:hover { background-color: #0a5a7d; }
-.photos-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-.photos-preview img { width: 100px; height: 100px; object-fit: cover; border-radius: 5px; border: 1px solid #ccc; }
-.add-photos-btn { background: #3498db; color: #fff; padding: 10px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
-.add-photos-btn:hover { background: #2980b9; }
-</style>
 </head>
 <body>
 
-<!-- Navbar -->
 <div id="navbar-container"></div>
 
 <h2 style="text-align:center;">Post a Job</h2>
@@ -28,10 +16,6 @@ button:hover { background-color: #0a5a7d; }
   <input type="text" id="title" placeholder="Job title" required>
   <textarea id="description" placeholder="Job description" rows="5" required></textarea>
   <input type="text" id="location" placeholder="Location">
-  
-  <button type="button" class="add-photos-btn">+ Add Photos (up to 5)</button>
-  <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
-  <div class="photos-preview" id="photosPreview"></div>
 
   <label for="category">Category:</label>
   <select id="category" required>
@@ -42,8 +26,18 @@ button:hover { background-color: #0a5a7d; }
     <option value="IT">IT</option>
     <option value="Other">Other</option>
   </select>
-  <button type="submit">Submit Job</button>
+
+  <div class="photos-dropzone" id="photosDropzone">
+    Drag & drop photos here or click to add (max 5)
+  </div>
+  <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+  <div class="photos-preview" id="photosPreview"></div>
+
+  <div class="spinner" id="spinner"></div>
+  <button type="submit" id="submitBtn">Submit Job</button>
 </form>
+
+<div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -51,99 +45,106 @@ import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.g
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// Firebase config
 const firebaseConfig = { /* your config */ };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-let currentUser = null;
-let selectedFiles = [];
+let currentUser=null, selectedFiles=[];
 
-// Load navbar
-fetch("navbar.html")
-  .then(r => r.text())
-  .then(html => document.getElementById("navbar-container").innerHTML = html)
-  .then(() => import("./navbar.js"));
-
-// Auth check
-onAuthStateChanged(auth, user => {
-  if (!user) window.location.href = "login.html";
-  currentUser = user;
+// Navbar
+document.addEventListener("DOMContentLoaded", async () => {
+  const navbarContainer = document.getElementById("navbar-container");
+  const response = await fetch("navbar.html");
+  navbarContainer.innerHTML = await response.text();
+  await import("./navbar.js");
 });
 
-// Photo button
-const addPhotosBtn = document.querySelector(".add-photos-btn");
+// Auth check
+onAuthStateChanged(auth,user=>{
+  if(!user) window.location.href="login.html";
+  currentUser=user;
+});
+
+// Toast helper
+function showToast(message){
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.style.display="block";
+  setTimeout(()=>{toast.style.display="none";}, 3000);
+}
+
+// Drag & drop
+const dropzone = document.getElementById("photosDropzone");
 const photoInput = document.getElementById("photoInput");
 const photosPreview = document.getElementById("photosPreview");
 
-addPhotosBtn.addEventListener("click", () => photoInput.click());
+dropzone.addEventListener("click",()=>photoInput.click());
+dropzone.addEventListener("dragover", e=>{e.preventDefault(); dropzone.classList.add("dragover");});
+dropzone.addEventListener("dragleave", e=>dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", e=>{ e.preventDefault(); dropzone.classList.remove("dragover"); handleFiles(Array.from(e.dataTransfer.files)); });
+photoInput.addEventListener("change",()=>handleFiles(Array.from(photoInput.files)));
 
-photoInput.addEventListener("change", () => {
-  selectedFiles = Array.from(photoInput.files).slice(0,5); // max 5
-  photosPreview.innerHTML = "";
-  selectedFiles.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = document.createElement("img");
-      img.src = e.target.result;
-      photosPreview.appendChild(img);
+function handleFiles(files){
+  selectedFiles = selectedFiles.concat(files).slice(0,5);
+  photosPreview.innerHTML="";
+  selectedFiles.forEach((file,index)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const wrapper=document.createElement("div");
+      wrapper.classList.add("photo-wrapper");
+      const img=document.createElement("img");
+      img.src=e.target.result;
+      const removeBtn=document.createElement("button");
+      removeBtn.textContent="×";
+      removeBtn.classList.add("remove-photo");
+      removeBtn.addEventListener("click",()=>{ selectedFiles.splice(index,1); wrapper.remove(); });
+      wrapper.appendChild(img);
+      wrapper.appendChild(removeBtn);
+      photosPreview.appendChild(wrapper);
     };
     reader.readAsDataURL(file);
   });
-});
+}
 
-// Submit job
-document.getElementById("jobForm").addEventListener("submit", async e => {
+// Submit
+document.getElementById("jobForm").addEventListener("submit", async e=>{
   e.preventDefault();
+  if(!currentUser) return showToast("Please login first.");
+  const title=document.getElementById("title").value.trim();
+  const description=document.getElementById("description").value.trim();
+  const location=document.getElementById("location").value.trim();
+  const category=document.getElementById("category").value;
 
-  if (!currentUser) return alert("Please login first.");
+  if(title.length<5 || description.length<10) return showToast("Title ≥5 & description ≥10 chars");
+  if(!category) return showToast("Select a category");
 
-  const title = document.getElementById("title").value.trim();
-  const description = document.getElementById("description").value.trim();
-  const location = document.getElementById("location").value.trim();
-  const category = document.getElementById("category").value;
+  const spinner=document.getElementById("spinner");
+  const submitBtn=document.getElementById("submitBtn");
+  spinner.style.display="block"; submitBtn.disabled=true;
 
-  if (!title || !description || !category) return alert("Title, description, and category are required.");
-
-  try {
-    // Upload images to storage
-    const imageUrls = [];
-    for (const file of selectedFiles) {
-      const storageRef = ref(storage, `jobs/${currentUser.uid}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+  try{
+    const imageUrls=[];
+    for(const file of selectedFiles){
+      const storageRef=ref(storage,`jobs/${currentUser.uid}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef,file);
+      const url=await getDownloadURL(storageRef);
       imageUrls.push(url);
     }
-
-    // Add job to Firestore
-    await addDoc(collection(db, "jobs"), {
-      title,
-      description,
-      location,
-      category,
-      images: imageUrls,
-      ownerId: currentUser.uid,
-      createdAt: serverTimestamp(),
-      approved: false,
-      creditCost: 0
+    await addDoc(collection(db,"jobs"),{
+      title,description,location,category,images:imageUrls,
+      ownerId:currentUser.uid,createdAt:serverTimestamp(),approved:false,creditCost:0
     });
-
-    alert("🎉 Job submitted successfully! It will be reviewed by admin shortly.");
+    showToast("🎉 Job submitted successfully! Admin will review shortly.");
     document.getElementById("jobForm").reset();
-    photosPreview.innerHTML = "";
-    selectedFiles = [];
-  } catch (err) {
-    alert("❌ Error posting job: " + err.message);
-  }
+    photosPreview.innerHTML="";
+    selectedFiles=[];
+  }catch(err){showToast("❌ Error posting job: "+err.message);}
+  finally{spinner.style.display="none"; submitBtn.disabled=false;}
 });
 
-// Global logout
-window.logout = async function() {
-  await signOut(auth);
-  window.location.href = "index.html";
-};
+window.logout=async()=>{await signOut(auth); window.location.href="index.html";}
 </script>
 </body>
 </html>
