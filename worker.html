@@ -21,6 +21,21 @@ body{margin:0;font-family:Arial;background:var(--bg);}
   padding:20px;
 }
 
+.top-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+}
+
+.credit-box{
+  background:#fff;
+  padding:12px 18px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  font-weight:bold;
+}
+
 .job-card{
   background:#fff;
   padding:20px;
@@ -50,12 +65,14 @@ body{margin:0;font-family:Arial;background:var(--bg);}
 }
 
 .unlock-btn:hover{background:var(--accent);}
+.unlock-btn:disabled{background:#aaa;cursor:not-allowed;}
+
 .locked{color:#c0392b;font-weight:bold;}
 .contact-box{
   background:#eaf7ea;
-  padding:10px;
+  padding:12px;
   border-radius:8px;
-  margin-top:10px;
+  margin-top:12px;
 }
 </style>
 </head>
@@ -64,14 +81,32 @@ body{margin:0;font-family:Arial;background:var(--bg);}
 <div id="navbar-container"></div>
 
 <div class="container">
-<h2>Available Jobs</h2>
-<div id="jobList"></div>
+
+<div class="top-bar">
+  <h2>Available Jobs</h2>
+  <div class="credit-box">
+    Credits: <span id="creditBalance">0</span>
+  </div>
+</div>
+
+<div id="jobList">Loading jobs...</div>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  addDoc, 
+  query, 
+  where 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { /* YOUR CONFIG */ };
 
@@ -92,25 +127,37 @@ let workerData;
 onAuthStateChanged(auth, async user=>{
   if(!user){ window.location.href="login.html"; return; }
   currentUser=user;
-  const snap = await getDoc(doc(db,"users",user.uid));
-  workerData=snap.data();
+
+  const userSnap = await getDoc(doc(db,"users",user.uid));
+  workerData=userSnap.data();
+
+  document.getElementById("creditBalance").textContent = workerData.credits || 0;
+
   loadJobs();
 });
 
 async function loadJobs(){
   const jobList=document.getElementById("jobList");
-  jobList.innerHTML="Loading jobs...";
-  const snapshot = await getDocs(collection(db,"jobs"));
   jobList.innerHTML="";
 
-  snapshot.forEach(docSnap=>{
+  const jobSnapshot = await getDocs(collection(db,"jobs"));
+
+  for(const docSnap of jobSnapshot.docs){
+
     const job=docSnap.data();
-    if(!job.approved) return;
+    if(!job.approved) continue;
+
+    const unlockQuery = query(
+      collection(db,"unlocks"),
+      where("jobId","==",docSnap.id),
+      where("workerId","==",currentUser.uid)
+    );
+
+    const unlockSnap = await getDocs(unlockQuery);
+    const alreadyUnlocked = !unlockSnap.empty;
 
     const card=document.createElement("div");
     card.className="job-card";
-
-    const alreadyUnlocked = false;
 
     card.innerHTML=`
       <h3>${job.title}</h3>
@@ -118,43 +165,53 @@ async function loadJobs(){
         Category: ${job.category} | Location: ${job.location}
       </div>
       <p>${job.description}</p>
+
       <div class="images">
-        ${job.images.map(img=>`<img src="${img}">`).join("")}
+        ${job.images?.map(img=>`<img src="${img}">`).join("") || ""}
       </div>
-      <div>
-        <strong>Unlock cost:</strong> ${job.creditCost} credits
-      </div>
-      <div class="locked">Contact details hidden</div>
-      <button class="unlock-btn">Unlock Job</button>
+
+      <div><strong>Unlock cost:</strong> ${job.creditCost} credits</div>
+
+      ${alreadyUnlocked 
+        ? `<div class="contact-box">
+             <strong>Customer Contact:</strong><br>
+             Name: ${job.ownerName || "Hidden"}<br>
+             Phone: ${job.ownerPhone || "Hidden"}
+           </div>`
+        : `<div class="locked">Contact details hidden</div>
+           <button class="unlock-btn">Unlock Job</button>`
+      }
     `;
 
-    const btn=card.querySelector(".unlock-btn");
+    if(!alreadyUnlocked){
+      const btn=card.querySelector(".unlock-btn");
 
-    btn.onclick=async ()=>{
-      if(workerData.credits < job.creditCost){
-        alert("Not enough credits. Please buy more.");
-        window.location.href="buy-credits.html";
-        return;
-      }
+      btn.onclick=async ()=>{
+        if(workerData.credits < job.creditCost){
+          alert("Not enough credits.");
+          window.location.href="buy-credits.html";
+          return;
+        }
 
-      if(!confirm(`Unlock this job for ${job.creditCost} credits?`)) return;
+        if(!confirm(`Unlock this job for ${job.creditCost} credits?`)) return;
 
-      await updateDoc(doc(db,"users",currentUser.uid),{
-        credits: workerData.credits - job.creditCost
-      });
+        await updateDoc(doc(db,"users",currentUser.uid),{
+          credits: workerData.credits - job.creditCost
+        });
 
-      await addDoc(collection(db,"unlocks"),{
-        jobId: docSnap.id,
-        workerId: currentUser.uid,
-        unlockedAt: new Date()
-      });
+        await addDoc(collection(db,"unlocks"),{
+          jobId: docSnap.id,
+          workerId: currentUser.uid,
+          unlockedAt: new Date()
+        });
 
-      alert("Job unlocked! You can now contact the customer.");
-      location.reload();
-    };
+        alert("Job unlocked successfully!");
+        location.reload();
+      };
+    }
 
     jobList.appendChild(card);
-  });
+  }
 }
 </script>
 
