@@ -181,20 +181,30 @@ main { margin-top:60px; }
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-  // Load navbar
+  // Load navbar first
   const navbarContainer = document.getElementById("navbar-container");
-  const response = await fetch("navbar.html");
-  navbarContainer.innerHTML = await response.text();
-  await import("./navbar.js");
+  try {
+    const response = await fetch("navbar.html");
+    navbarContainer.innerHTML = await response.text();
+    await import("./navbar.js");
+  } catch(err){ console.error("Navbar failed to load:", err); }
 
   // Modal logic
   const modal = document.getElementById("welcomeModal");
   const modalContent = document.getElementById("modalContent");
   const skipBtn = document.getElementById("skipModal");
+  const homeownerBtn = document.getElementById("homeownerBtn");
+  const tradesBtn = document.getElementById("tradesBtn");
 
+  // Make sure modal is on top and clickable
+  modal.style.display = "flex";
+  modal.style.zIndex = "1001";
+
+  // Skip modal
   skipBtn.addEventListener("click", ()=>{ modal.style.display = "none"; });
 
-  document.getElementById("homeownerBtn").addEventListener("click", ()=>{
+  // Homeowner flow
+  homeownerBtn.addEventListener("click", ()=>{
     modalContent.innerHTML = `
       <h2>What type of work do you need doing?</h2>
       <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
@@ -207,28 +217,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
     `;
 
+    // Category selection
     modalContent.querySelectorAll(".jobCat").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const cat = btn.getAttribute("data-category");
+        modal.style.display="none"; // hide modal before redirect
         window.location.href = `post-job.html?category=${encodeURIComponent(cat)}`;
       });
     });
 
+    // Back button
     document.getElementById("backBtn").addEventListener("click", ()=>{
-      location.reload();
+      location.reload(); // reload to show initial modal
     });
   });
 
-  document.getElementById("tradesBtn").addEventListener("click", ()=>{
+  // Tradesperson flow
+  tradesBtn.addEventListener("click", ()=>{
+    modal.style.display="none"; // hide modal before redirect
     window.location.href = "worker.html";
-  });
-
-  // Category cards click
-  document.querySelectorAll(".category").forEach(catBtn=>{
-    catBtn.addEventListener("click", ()=>{
-      const cat = catBtn.getAttribute("data-category");
-      window.location.href = `post-job.html?category=${encodeURIComponent(cat)}`;
-    });
   });
 });
 </script>
