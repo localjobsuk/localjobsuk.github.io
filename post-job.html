@@ -5,121 +5,234 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Post a Job | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
+
 <style>
-body { font-family:'Inter', sans-serif; background:#f7f7f7; margin:0; padding:0; }
-h2{text-align:center;color:#203a43;margin-top:20px;}
-form{max-width:600px;margin:20px auto;display:flex;flex-direction:column;gap:12px;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-input, textarea, select, button{padding:10px;border-radius:5px;border:1px solid #ccc;}
-button{background-color:#203a43;color:#fff;border:none;cursor:pointer;font-weight:bold;}
-button:hover{background-color:#0a5a7d;}
-.photos-preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-.photos-preview img{width:100px;height:100px;object-fit:cover;border-radius:5px;border:1px solid #ccc;}
-.add-photos-btn{background:#3498db;color:#fff;padding:10px;border-radius:5px;border:none;cursor:pointer;font-weight:bold;}
-.add-photos-btn:hover{background:#2980b9;}
+:root{
+  --primary:#203a43;
+  --accent:#3498db;
+  --bg:#f4f6f8;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:var(--bg);
+}
+
+.container{
+  max-width:700px;
+  margin:60px auto;
+  background:#fff;
+  padding:35px;
+  border-radius:12px;
+  box-shadow:0 4px 15px rgba(0,0,0,0.08);
+}
+
+h2{text-align:center;margin-bottom:10px;}
+.step{margin-bottom:25px;}
+
+label{font-weight:bold;display:block;margin-bottom:8px;}
+select,textarea,input{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  font-size:1em;
+}
+
+textarea{resize:vertical;min-height:120px;}
+
+.counter{
+  text-align:right;
+  font-size:0.9em;
+  color:#666;
+}
+
+.dropzone{
+  border:2px dashed #ccc;
+  padding:20px;
+  text-align:center;
+  border-radius:10px;
+  cursor:pointer;
+  background:#fafafa;
+}
+
+.preview{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+
+.preview img{
+  width:100px;
+  height:100px;
+  object-fit:cover;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.btn{
+  width:100%;
+  padding:14px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn:hover{background:var(--accent);}
+
+.error{color:#c0392b;font-size:0.9em;}
 </style>
 </head>
 <body>
 
 <div id="navbar-container"></div>
-<h2>Post a Job</h2>
+
+<div class="container">
+<h2>Tell us about your job</h2>
+<p style="text-align:center;color:#555;">
+Tradespeople will use this information to decide if they can help you.
+</p>
 
 <form id="jobForm">
-  <input type="text" id="title" placeholder="Job title" required>
-  <textarea id="description" placeholder="Job description" rows="5" required></textarea>
-  <input type="text" id="location" placeholder="Location">
-  <button type="button" class="add-photos-btn">+ Add Photos (up to 5)</button>
-  <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
-  <div class="photos-preview" id="photosPreview"></div>
 
-  <label for="category">Category:</label>
-  <select id="category" required>
-    <option value="">Select category</option>
-    <option value="Gardening">Gardening</option>
-    <option value="Cleaning">Cleaning</option>
-    <option value="Delivery">Delivery</option>
-    <option value="IT">IT</option>
-    <option value="Other">Other</option>
-  </select>
-  <button type="submit">Submit Job</button>
+<div class="step">
+<label>What type of work do you need?</label>
+<select id="category" required>
+<option value="">Select category</option>
+<option>Bathroom</option>
+<option>Building</option>
+<option>Carpentry</option>
+<option>Cleaning</option>
+<option>Electrical</option>
+<option>Flooring</option>
+<option>Gardening</option>
+<option>Heating / Gas</option>
+<option>Painting & Decorating</option>
+<option>Plumbing</option>
+<option>Roofing</option>
+<option>Other</option>
+</select>
+</div>
+
+<div class="step">
+<label>Job title</label>
+<input type="text" id="title" required minlength="10">
+</div>
+
+<div class="step">
+<label>Job description</label>
+<textarea id="description" required minlength="25"></textarea>
+<div class="counter"><span id="chars">0</span>/25 minimum</div>
+</div>
+
+<div class="step">
+<label>Job location</label>
+<input type="text" id="location" placeholder="City or postcode" required>
+</div>
+
+<div class="step">
+<label>Upload photos (optional – max 5)</label>
+<div class="dropzone" id="dropzone">Click or drag photos here</div>
+<input type="file" id="photos" multiple accept="image/*" hidden>
+<div class="preview" id="preview"></div>
+</div>
+
+<button class="btn" type="submit">Submit Job for Review</button>
+<p class="error" id="error"></p>
+
 </form>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const firebaseConfig={/* your config */};
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const auth=getAuth(app);
-const storage=getStorage(app);
+const firebaseConfig = { /* YOUR CONFIG */ };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-let currentUser=null, userData=null, selectedFiles=[];
+fetch("navbar.html").then(r=>r.text()).then(html=>{
+  document.getElementById("navbar-container").innerHTML = html;
+}).then(()=>import("./navbar.js"));
 
-// Load Navbar
-fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
+let user;
+let files=[];
 
-// Check auth & verification
-onAuthStateChanged(auth, async user=>{
-  if(!user) window.location.href="signup.html";
-  currentUser=user;
-  const docSnap = await getDoc(doc(db,"users",user.uid));
-  if(docSnap.exists()) userData = docSnap.data();
-  if(!userData.verified) window.location.href="verify.html";
+onAuthStateChanged(auth,async u=>{
+  if(!u){window.location.href="signup.html";return;}
+  const snap = await getDoc(doc(db,"users",u.uid));
+  if(!snap.data()?.verified){
+    window.location.href="verify.html";
+    return;
+  }
+  user=u;
 });
 
-// Photos
-const addPhotosBtn=document.querySelector(".add-photos-btn");
-const photoInput=document.getElementById("photoInput");
-const photosPreview=document.getElementById("photosPreview");
-addPhotosBtn.addEventListener("click",()=>photoInput.click());
-photoInput.addEventListener("change",()=>{
-  selectedFiles=Array.from(photoInput.files).slice(0,5);
-  photosPreview.innerHTML="";
-  selectedFiles.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const img=document.createElement("img");
-      img.src=e.target.result;
-      photosPreview.appendChild(img);
-    };
-    reader.readAsDataURL(file);
+const desc=document.getElementById("description");
+const chars=document.getElementById("chars");
+desc.addEventListener("input",()=>chars.textContent=desc.value.length);
+
+const dropzone=document.getElementById("dropzone");
+const photos=document.getElementById("photos");
+const preview=document.getElementById("preview");
+
+dropzone.onclick=()=>photos.click();
+photos.onchange=()=>{
+  files=[...photos.files].slice(0,5);
+  preview.innerHTML="";
+  files.forEach(f=>{
+    const img=document.createElement("img");
+    img.src=URL.createObjectURL(f);
+    preview.appendChild(img);
   });
-});
+};
 
-// Submit Job
-document.getElementById("jobForm").addEventListener("submit", async e=>{
+document.getElementById("jobForm").onsubmit=async e=>{
   e.preventDefault();
-  if(!currentUser || !userData || !userData.verified) return;
+  const error=document.getElementById("error");
+  error.textContent="";
 
-  const title=document.getElementById("title").value.trim();
-  const description=document.getElementById("description").value.trim();
-  const location=document.getElementById("location").value.trim();
-  const category=document.getElementById("category").value;
-  if(!title||!description||!category) return alert("Title, description, and category are required.");
+  if(desc.value.length<25){
+    error.textContent="Description must be at least 25 characters.";
+    return;
+  }
 
   try{
-    const imageUrls=[];
-    for(const file of selectedFiles){
-      const storageRef=ref(storage,`jobs/${currentUser.uid}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef,file);
-      const url=await getDownloadURL(storageRef);
-      imageUrls.push(url);
+    const urls=[];
+    for(const f of files){
+      const r=ref(storage,`jobs/${user.uid}/${Date.now()}_${f.name}`);
+      await uploadBytes(r,f);
+      urls.push(await getDownloadURL(r));
     }
+
     await addDoc(collection(db,"jobs"),{
-      title, description, location, category, images:imageUrls,
-      ownerId:currentUser.uid,
-      createdAt:serverTimestamp(),
+      title:title.value,
+      description:desc.value,
+      category:category.value,
+      location:location.value,
+      images:urls,
+      ownerId:user.uid,
       approved:false,
-      creditCost:0
+      creditCost:0,
+      createdAt:serverTimestamp()
     });
-    alert("🎉 Job submitted successfully! Waiting for admin approval.");
-    document.getElementById("jobForm").reset();
-    photosPreview.innerHTML="";
-    selectedFiles=[];
-  }catch(err){ alert("❌ Error posting job: "+err.message); }
-});
+
+    alert("✅ Job submitted! It will go live once approved.");
+    window.location.href="index.html";
+
+  }catch(err){
+    error.textContent=err.message;
+  }
+};
 </script>
 
 </body>
