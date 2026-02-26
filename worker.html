@@ -6,198 +6,130 @@
 <title>Available Jobs | LocalJobsUK</title>
 <link rel="stylesheet" href="style.css">
 <style>
-/* Filters */
-.filters {
-  max-width: 800px;
-  margin: 20px auto;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.filters select, .filters input {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  flex: 1;
-  min-width: 120px;
-}
-
-/* Credits display */
-.credits-display {
-  text-align: center;
-  margin-top: 10px;
-  font-weight: bold;
-  font-size: 1.1em;
-}
-.unlock-btn {
-  background: var(--accent-color);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  margin-top: 5px;
-}
-.unlock-btn:hover { background: #2980b9; }
+.container{max-width:900px;margin:20px auto;}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;}
+.filters select, .filters input{padding:10px;border-radius:6px;border:1px solid #ccc;}
+.job-card{background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);margin-bottom:15px;display:flex;flex-direction:column;gap:8px;}
+.job-card img{width:100%;border-radius:8px;object-fit:cover;}
+.job-card .title{font-weight:bold;font-size:1.2em;}
+.job-card .category{font-size:0.9em;color:#455a64;}
+.job-card .contact-blur{filter:blur(4px);transition:filter 0.3s;}
+.job-card .contact-blur.unlocked{filter:none;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#203a43;color:#fff;padding:12px 20px;border-radius:10px;display:none;z-index:1000;}
 </style>
 </head>
 <body>
 <div id="navbar-container"></div>
 
-<main>
-  <div class="credits-display">Credits: <span id="userCredits">0</span></div>
-  <div class="filters"> ... </div>
-  <div id="jobsContainer" style="max-width:800px; margin:20px auto;"></div>
-</main>
-
-<script type="module"> ... </script>
-</body>
-
-<div id="navbar-container"></div>
-
-<div class="credits-display">
-  Credits: <span id="userCredits">0</span>
+<div class="container">
+  <div class="filters">
+    <select id="filterCategory"><option value="">All Categories</option><option value="Gardening">Gardening</option><option value="Cleaning">Cleaning</option><option value="Delivery">Delivery</option><option value="IT">IT</option><option value="Other">Other</option></select>
+    <input type="text" id="filterLocation" placeholder="Location">
+    <select id="sortJobs"><option value="newest">Newest</option><option value="credits">Credit Cost</option></select>
+    <button id="applyFilters" class="btn">Apply</button>
+  </div>
+  <div id="jobsContainer"></div>
 </div>
-
-<div class="filters">
-  <select id="filterCategory">
-    <option value="">All Categories</option>
-    <option value="Gardening">Gardening</option>
-    <option value="Cleaning">Cleaning</option>
-    <option value="Delivery">Delivery</option>
-    <option value="IT">IT</option>
-    <option value="Other">Other</option>
-  </select>
-  <input type="text" id="filterLocation" placeholder="Location">
-  <select id="sortJobs">
-    <option value="newest">Newest</option>
-    <option value="credit">Lowest Credit Cost</option>
-  </select>
-</div>
-
-<div id="jobsContainer" style="max-width:800px; margin:20px auto;"></div>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+const firebaseConfig={/* your config */};
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+const auth=getAuth(app);
 
-let currentUser = null;
-let userCredits = 0;
-let allJobs = [];
+let currentUser=null;
+const jobsContainer=document.getElementById("jobsContainer");
+const toast=document.getElementById("toast");
+function showToast(msg){toast.textContent=msg;toast.style.display="block";setTimeout(()=>{toast.style.display="none";},3000);}
 
-// Navbar
-document.addEventListener("DOMContentLoaded", async () => {
-  const navbarContainer = document.getElementById("navbar-container");
-  const response = await fetch("navbar.html");
-  navbarContainer.innerHTML = await response.text();
-  await import("./navbar.js");
-});
+fetch("navbar.html").then(r=>r.text()).then(html=>document.getElementById("navbar-container").innerHTML=html).then(()=>import("./navbar.js"));
 
-// Toast helper
-function showToast(msg){
-  const toast = document.getElementById("toast");
-  toast.textContent = msg;
-  toast.style.display="block";
-  setTimeout(()=>toast.style.display="none",3000);
-}
+onAuthStateChanged(auth,user=>{if(user) currentUser=user;});
 
-// Auth check
-onAuthStateChanged(auth,user=>{
-  if(!user) window.location.href="login.html";
-  currentUser = user;
-  // Load credits from user profile
-  if(user.credits !== undefined) userCredits = user.credits;
-  document.getElementById("userCredits").textContent = userCredits;
-  loadJobs();
-});
-
-// Load jobs
 async function loadJobs(){
-  const q = query(collection(db,"jobs"), orderBy("createdAt","desc"));
-  const snapshot = await getDocs(q);
-  allJobs = snapshot.docs.map(doc=>({id:doc.id, ...doc.data()}));
-  displayJobs(allJobs);
+  jobsContainer.innerHTML="Loading jobs...";
+  const q = query(collection(db,"jobs"),orderBy("createdAt","desc"));
+  const snapshot=await getDocs(q);
+  jobsContainer.innerHTML="";
+  snapshot.forEach(docSnap=>{
+    const job=docSnap.data();
+    const card=document.createElement("div");
+    card.className="job-card";
+    let imgsHTML="";
+    if(job.images) job.images.forEach(url=>imgsHTML+=`<img src="${url}">`);
+    card.innerHTML=`<div class="title">${job.title}</div>
+      <div class="category">${job.category} | ${job.location || "Unknown"}</div>
+      ${imgsHTML}
+      <div>${job.description}</div>
+      <div class="contact-blur" data-owner="${job.ownerId}">Contact: Hidden</div>
+      <button class="unlock-btn">Unlock Contact</button>`;
+    jobsContainer.appendChild(card);
+  });
+  attachUnlockEvents();
 }
 
-// Display jobs with filters
-function displayJobs(jobs){
-  const container = document.getElementById("jobsContainer");
-  container.innerHTML="";
-  const filterCat = document.getElementById("filterCategory").value;
-  const filterLoc = document.getElementById("filterLocation").value.toLowerCase();
-
-  jobs.filter(job=>{
-    return (!filterCat || job.category===filterCat) &&
-           (!filterLoc || (job.location && job.location.toLowerCase().includes(filterLoc)));
-  }).forEach(job=>{
-    const card = document.createElement("div");
-    card.classList.add("job-card");
-
-    const title = document.createElement("div");
-    title.classList.add("title");
-    title.textContent = job.title;
-
-    const category = document.createElement("div");
-    category.classList.add("category");
-    category.textContent = job.category + (job.location ? " | " + job.location : "");
-
-    const desc = document.createElement("div");
-    desc.textContent = job.description;
-
-    // Images
-    if(job.images && job.images.length>0){
-      const img = document.createElement("img");
-      img.src = job.images[0];
-      card.appendChild(img);
-    }
-
-    // Contact info
-    const contact = document.createElement("div");
-    contact.classList.add("contact-blur");
-    contact.textContent = job.contact || "Contact info hidden";
-
-    // Unlock button if needed
-    if(job.creditCost && job.creditCost>0){
-      const btn = document.createElement("button");
-      btn.textContent = `Unlock (${job.creditCost} credits)`;
-      btn.classList.add("unlock-btn");
-      btn.onclick = ()=>{
-        if(userCredits >= job.creditCost){
-          userCredits -= job.creditCost;
-          document.getElementById("userCredits").textContent = userCredits;
-          contact.classList.add("unlocked");
-          showToast("✅ Contact unlocked!");
-          // TODO: Update credits in Firestore
-        } else showToast("❌ Not enough credits!");
-      };
-      card.appendChild(btn);
-    } else contact.classList.add("unlocked");
-
-    card.appendChild(title);
-    card.appendChild(category);
-    card.appendChild(desc);
-    card.appendChild(contact);
-    container.appendChild(card);
+function attachUnlockEvents(){
+  document.querySelectorAll(".unlock-btn").forEach(btn=>{
+    btn.addEventListener("click",async e=>{
+      if(!currentUser) {window.location.href="signup.html"; return;}
+      const contactDiv=btn.previousElementSibling;
+      const ownerId=contactDiv.dataset.owner;
+      const userDoc=await getDoc(doc(db,"users",ownerId));
+      const ownerData=userDoc.data();
+      // check credits
+      const currentUserData=await getDoc(doc(db,"users",currentUser.uid));
+      if(currentUserData.data().credits<1){showToast("Not enough credits"); return;}
+      // deduct credit
+      await updateDoc(doc(db,"users",currentUser.uid),{credits:currentUserData.data().credits-1});
+      contactDiv.textContent="Contact: "+ownerData.contactNumber;
+      contactDiv.classList.add("unlocked");
+      showToast("Contact unlocked!");
+    });
   });
 }
 
-// Filters & sorting
-document.getElementById("filterCategory").addEventListener("change", ()=>displayJobs(allJobs));
-document.getElementById("filterLocation").addEventListener("input", ()=>displayJobs(allJobs));
-document.getElementById("sortJobs").addEventListener("change", e=>{
-  const sortVal = e.target.value;
-  if(sortVal==="credit") allJobs.sort((a,b)=>(a.creditCost||0)-(b.creditCost||0));
-  else allJobs.sort((a,b)=>b.createdAt?.seconds - a.createdAt?.seconds);
-  displayJobs(allJobs);
+// Filters
+document.getElementById("applyFilters").addEventListener("click",async ()=>{
+  const category=document.getElementById("filterCategory").value.toLowerCase();
+  const location=document.getElementById("filterLocation").value.toLowerCase();
+  const sort=document.getElementById("sortJobs").value;
+
+  jobsContainer.innerHTML="Loading filtered jobs...";
+  const snapshot=await getDocs(collection(db,"jobs"));
+  jobsContainer.innerHTML="";
+  let jobsArray=[];
+  snapshot.forEach(docSnap=>{jobsArray.push({...docSnap.data(),id:docSnap.id});});
+
+  if(category) jobsArray=jobsArray.filter(j=>j.category.toLowerCase().includes(category));
+  if(location) jobsArray=jobsArray.filter(j=>j.location.toLowerCase().includes(location));
+
+  if(sort==="credits") jobsArray.sort((a,b)=>a.creditCost-b.creditCost);
+  else jobsArray.sort((a,b)=>b.createdAt?.seconds-(a.createdAt?.seconds||0));
+
+  jobsArray.forEach(job=>{
+    const card=document.createElement("div");
+    card.className="job-card";
+    let imgsHTML="";
+    if(job.images) job.images.forEach(url=>imgsHTML+=`<img src="${url}">`);
+    card.innerHTML=`<div class="title">${job.title}</div>
+      <div class="category">${job.category} | ${job.location || "Unknown"}</div>
+      ${imgsHTML}
+      <div>${job.description}</div>
+      <div class="contact-blur" data-owner="${job.ownerId}">Contact: Hidden</div>
+      <button class="unlock-btn">Unlock Contact</button>`;
+    jobsContainer.appendChild(card);
+  });
+  attachUnlockEvents();
 });
+
+loadJobs();
 </script>
 </body>
 </html>
