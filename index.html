@@ -5,36 +5,22 @@
 <title>LocalJobsUK | Verified Local Jobs for Tradespeople</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
-<style>
-  .hero { max-width: 800px; margin: 40px auto; text-align: center; }
-  .hero h1 { font-size: 2.5em; margin-bottom: 10px; }
-  .hero p { font-size: 1.2em; margin-bottom: 20px; color:#333; }
-  .cta-buttons a { padding: 12px 25px; border-radius: 6px; color: #fff; text-decoration: none; margin: 0 10px; display: inline-block; }
-  .primary { background: #203a43; }
-  .secondary { background: #455a64; }
-  .info-box { background:#f7f7f7; padding:20px; margin-top:30px; border-radius:8px; text-align:left; }
-  footer { text-align:center; margin:40px 0 20px; color:#555; }
-</style>
 </head>
 <body>
-  <div id="navbar-container"></div>
-  <main>
-    <!-- page content here -->
-  </main>
-</body>
 
 <div id="navbar-container"></div>
 
-<section class="hero">
-  <h1>Hire Local Workers. Fast.</h1>
-  <p>LocalJobsUK connects people who need work done with trusted local workers. Post a job or find paid work in minutes.</p>
+<main>
+  <section class="hero">
+    <h1>Hire Local Workers. Fast.</h1>
+    <p>LocalJobsUK connects people who need work done with trusted local workers. Post a job or find paid work in minutes.</p>
+    <div class="cta-buttons">
+      <a href="post-job.html" class="btn">Post a Job</a>
+      <a href="worker.html" class="btn">Find Work</a>
+    </div>
+  </section>
 
-  <div class="cta-buttons">
-    <a href="post-job.html" class="primary">Post a Job</a>
-    <a href="worker.html" class="secondary">Find Work</a>
-  </div>
-
-  <div class="info-box">
+  <section class="info-box">
     <strong>How it works:</strong>
     <ol>
       <li>Buy credits</li>
@@ -42,48 +28,19 @@
       <li>Contact job owner directly</li>
       <li>Get hired — no commission!</li>
     </ol>
-  </div>
-</section>
+  </section>
 
-<footer>
-  <p>© 2026 LocalJobsUK</p>
-</footer>
+  <footer>
+    <p>© 2026 LocalJobsUK</p>
+  </footer>
+</main>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
+<script>
 document.addEventListener("DOMContentLoaded", async () => {
   const navbarContainer = document.getElementById("navbar-container");
-  navbarContainer.innerHTML = await (await fetch("navbar.html")).text();
-
-  // make logout globally accessible
-  window.logout = async function() {
-    await signOut(auth);
-    window.location.href = "login.html";
-  };
-
-  // update navbar links based on auth
-  const navLinks = document.getElementById("navLinks");
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      navLinks.innerHTML = `
-        <a href="owner-dashboard.html">My Jobs</a>
-        <a href="#" onclick="logout()">Logout</a>
-      `;
-    } else {
-      navLinks.innerHTML = `
-        <a href="login.html">Login</a>
-        <a href="post-job.html">Post a Job</a>
-      `;
-    }
-  });
+  const response = await fetch("navbar.html");
+  navbarContainer.innerHTML = await response.text();
+  await import("./navbar.js");
 });
 </script>
 
